@@ -1,0 +1,9 @@
+NOVO GERENCIAMENTO DE SUBCLASSES
+
+1. No Supabase > SQL Editor, execute UMA VEZ o arquivo SUPABASE_SUBCLASSES_SETUP.sql.
+2. Abra /admin/ e entre normalmente.
+3. Use a nova seção “Subclasses” para criar ou renomear subclasses dentro das classes.
+4. Em Produtos Pharmagno > Editar, escolha a subclasse do produto.
+5. Em Promoções > Nova promoção > Aplicar em Subclasse, a subclasse criada aparecerá no seletor.
+
+O restante do Supabase, produtos, preços, estoque, login e promoções anteriores não precisa ser refeito.

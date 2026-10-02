@@ -1,0 +1,9 @@
+CORREÇÃO DE CATEGORIAS — HIGIENE
+
+Esta versão mantém o sincronizador Pharmagno instalado na farmácia sem alterações.
+
+No catálogo público, produtos claramente de higiene (absorventes, fraldas, sabonetes,
+shampoo, condicionador, desodorante, higiene bucal etc.) recebem prioridade na categoria
+Higiene, mesmo quando a classe herdada do Pharmagno/Supabase estiver incorreta.
+
+Produtos com estoque zero continuam ocultos e a busca/estoque visível permanecem ativos.

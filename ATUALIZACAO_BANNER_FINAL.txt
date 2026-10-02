@@ -1,0 +1,16 @@
+ATUALIZAÇÃO FINAL DO BANNER
+
+- Banner principal substituído pela nova arte vermelha.
+- Área do banner ampliada no desktop.
+- Proporção ajustada para a arte nova, evitando cortes e sobras.
+- Enquadramento central responsivo para desktop, tablet e celular.
+- Cache busting adicionado para evitar o navegador exibir o banner antigo.
+
+FUNÇÕES PRESERVADAS NESTA VERSÃO
+- Integração Pharmagno/Supabase existente.
+- Atualização automática por Supabase Realtime + atualização periódica.
+- Preço cheio e preço com desconto separados corretamente no WhatsApp.
+- Produtos sem foto continuam exibindo símbolos/placeholders.
+- Foto manual pelo painel com upload Cloudinary ou URL.
+- Kits, sorteios, promoções e opções de entrega.
+- WhatsApp configurado pelo painel.

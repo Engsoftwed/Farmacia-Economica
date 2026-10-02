@@ -1,0 +1,23 @@
+Crie no site uma categoria principal chamada "Perfumaria e Cosméticos" com exatamente duas subclasses: "Perfumaria" e "Cosméticos".
+
+PERFUMARIA
+Categorias internas: Algodão e Hastes, Barbear e Depilação, Cuidados do Bebê, Desodorantes, Higiene Bucal, Higiene Íntima, Perfumes e Colônias, Sabonetes e Banho
+
+COSMÉTICOS
+Categorias internas: Cabelos, Cuidados Faciais, Cuidados Labiais, Cuidados com a Pele, Maquiagem, Protetor Solar, Unhas
+
+Regras obrigatórias:
+- Os produtos devem ser carregados a partir das listas fornecidas, mantendo EAN, nome e categoria.
+- Cada produto deve possuir espaço para foto.
+- Use o EAN como identificador principal e também como referência para localizar/vincular a foto correta.
+- No painel administrativo, deve existir opção para adicionar, trocar ou remover a foto de cada produto.
+- Caso não exista foto cadastrada, exiba um placeholder elegante relacionado à categoria, sem deixar imagem quebrada.
+- Não misture medicamentos na seção Perfumaria e Cosméticos.
+- A interface deve permitir filtrar primeiro por Perfumaria/Cosméticos e depois pela categoria específica.
+- A busca deve funcionar por nome do produto, EAN e categoria.
+- Exibir cards com foto, nome, preço, preço promocional quando houver, botão de adicionar ao carrinho e ação de WhatsApp.
+- O carregamento deve ser rápido, usando paginação ou lazy loading das imagens.
+- A estrutura deve ser responsiva e simples de administrar.
+- Alterações de foto não podem interferir na integração de preço/estoque do produto.
+
+Use as planilhas "Perfumaria" e "Cosméticos" do arquivo como fonte oficial dos produtos dessa seção.

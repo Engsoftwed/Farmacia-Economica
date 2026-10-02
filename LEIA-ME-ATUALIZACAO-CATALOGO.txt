@@ -1,0 +1,12 @@
+ATUALIZAÇÃO DO CATÁLOGO — versão remota
+
+Esta versão NÃO exige voltar ao computador da farmácia e NÃO altera o sincronizador instalado.
+
+Mudanças feitas no site:
+- Produtos com estoque 0 não são exibidos.
+- Estoque disponível aparece nos cards.
+- Busca mostra sugestões de produtos enquanto o cliente digita.
+- Classificação de medicamentos permanece centralizada na categoria Medicamentos.
+- Integração Pharmagno/Supabase instalada na farmácia permanece intacta.
+
+Para publicar: substitua os arquivos do site no GitHub/Netlify pela versão deste ZIP.

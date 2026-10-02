@@ -1,0 +1,10 @@
+ATUALIZAÇÃO — LINKS DE ENTREGA
+
+1. No Supabase, abra SQL Editor e execute SUPABASE_ENTREGAS_SETUP.sql UMA VEZ.
+2. Suba estes arquivos no MESMO repositório do GitHub usado pelo Netlify.
+3. O Netlify fará um novo deploy automaticamente (se o repositório já estiver conectado).
+4. Entre em /admin, abra “Kits, Sorteios & Entrega”.
+5. Em 99, Giross ou Quero Delivery, cole o link oficial, marque Ativo e clique Salvar.
+6. O link fica salvo no Supabase e passa a aparecer para todos os clientes do site.
+
+Não precisa excluir o site do Netlify. Não precisa reenviar a pasta sincronizador para o GitHub.

@@ -1,0 +1,704 @@
+/*
+ * LOJA
+ * -----------------------------------------------------------------------------
+ * Este arquivo controla somente a experiência do cliente:
+ * catálogo, pesquisa, filtros, sacola, promoções e encaminhamento.
+ */
+
+let dados = carregarDados();
+let sacola = [];
+let promocoesCatalogo = [];
+
+// Paginação do catálogo
+const PRODUTOS_POR_PAGINA = 24;
+let paginaAtual = 1;
+let filtroAtual = "Todos";
+let termoAtual = "";
+let tipoBelezaAtual = "Todos";
+let detalheBelezaAtual = "Todos";
+
+// Referências da interface. Mantidas em um único lugar para evitar falhas silenciosas
+// quando o catálogo remoto terminar de carregar.
+const el = {
+  categorias: document.querySelector("#categoryGrid"),
+  produtos: document.querySelector("#productGrid"),
+  promo: document.querySelector("#activePromo"),
+  contador: document.querySelector("#bagCount"),
+  itens: document.querySelector("#bagItems"),
+  total: document.querySelector("#bagTotal"),
+  drawer: document.querySelector("#bagDrawer"),
+  backdrop: document.querySelector("#drawerBackdrop"),
+  searchbar: document.querySelector("#searchbar"),
+  busca: document.querySelector("#searchInput"),
+  entregas: document.querySelector("#deliveryOptions"),
+  subfiltros: document.querySelector("#catalogSubfilters")
+};
+
+function moeda(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+}
+
+function linkWhatsapp(mensagem) {
+  const numero = String(dados?.configuracoes?.whatsapp || "5577998514808").replace(/\D/g, "");
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem || "")}`;
+}
+
+function categoriaLoja(p) {
+  const classe = (p.classe || '').trim();
+  const subclasse = (p.subclasse || '').trim();
+  const t = `${p.produto || ''} ${p.laboratorio || ''} ${classe} ${subclasse}`.toLowerCase();
+
+  // 1) Medicamento sempre tem prioridade. Assim um remédio nunca cai em Higiene,
+  // Infantil, Perfumaria ou Cosméticos só por conter uma palavra genérica no nome.
+  const pareceMedicamento = /\b(mg|mcg|ui|comprimid|capsul|cápsul|xarope|suspens|solu[cç][aã]o|gotas?|injet|ampola|antibi[oó]tico|analg[eé]sico|antit[eé]rmico|anti[- ]?inflamat[oó]rio|antial[eé]rgico|verm[ií]fugo|suposit[oó]rio|col[ií]rio|dipirona|paracetamol|ibuprofeno|amoxicilina|azitromicina|loratadina|prednisolona|simeticona|acetilciste[ií]na|ambroxol|dexclorfeniramina|nimesulida|cetirizina|desloratadina|albel|albendazol)\b/i.test(t);
+  if (/medicamento|[eé]tico|gen[eé]rico|similar/i.test(classe) || pareceMedicamento) {
+    return 'Medicamentos Éticos e Similares Equivalentes';
+  }
+
+  // 2) O catálogo curado separa Perfumaria/Cosméticos. Itens de cuidados do bebê
+  // entram em Infantil, para a seção não ficar vazia ou limitada a fraldas.
+  const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
+  if (especial) {
+    if (/beb[eê]/i.test(especial.categoria || '')) return 'Infantil';
+    return especial.tipo;
+  }
+
+  // 3) Itens infantis não medicamentosos.
+  const infantilSeguro = ['fralda','pampers','huggies','babysec','isababy','piquitucho','pompom','lenço umedecido','lenco umedecido','mamadeira','chupeta','bico','absorvente seio','escova infantil','pente infantil','talco bebe','talco bebê','baby','bebe','bebê','xuxinha'];
+  if (infantilSeguro.some(k => t.includes(k))) return 'Infantil';
+
+  // 4) Mantém classes válidas vindas do Pharmagno.
+  if (classe && classe !== 'Não classificado' && classe !== 'Infantil') return classe;
+
+  // 5) Fallback apenas para itens realmente de higiene.
+  const higiene = ['absorvente','sabonete','shampoo','condicionador','creme dental','pasta dental','escova dental','fio dental','enxaguante','algodao','algodão','cotonete','papel higienico','papel higiênico','haste flexivel','haste flexível'];
+  if (higiene.some(k => t.includes(k))) return 'Higiene';
+
+  return classe === 'Infantil' ? 'Infantil' : 'Higiene';
+}
+
+async function carregarTodasPaginas(base, headers) {
+  const todos = [];
+  for (let ini = 0; ; ini += 1000) {
+    const fim = ini + 999;
+    const r = await fetch(base, {headers:{...headers, Range:`${ini}-${fim}`, Prefer:'count=exact'}});
+    if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+    const lote = await r.json(); todos.push(...lote);
+    if (lote.length < 1000) break;
+  }
+  return todos;
+}
+
+async function carregarCatalogoSupabase() {
+  const cfg = window.SUPABASE_CONFIG;
+  if (!cfg?.url || !cfg?.key) return false;
+  const headers = { apikey: cfg.key, Authorization: `Bearer ${cfg.key}` };
+  const endpoint = `${cfg.url}/rest/v1/produtos_pharmagno?select=id,codigo,produto,laboratorio,classe,subclasse,preco_prazo,preco_vista,estoque,imagem_url,desconto_fixo_pct,excecao_promocao,promocao_manual,ativo&ativo=eq.true&estoque=gt.0&order=produto.asc`;
+  const linhas = await carregarTodasPaginas(endpoint, headers);
+  try {
+    const rr = await fetch(`${cfg.url}/rest/v1/promocoes_catalogo?select=*&ativo=eq.true`, {headers});
+    promocoesCatalogo = rr.ok ? await rr.json() : [];
+  } catch (_) { promocoesCatalogo = []; }
+  dados.produtos = linhas.map(p => {
+    const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
+    const classeCatalogo = categoriaLoja(p);
+    const subclasseCatalogo = ['Perfumaria','Cosméticos'].includes(classeCatalogo) && especial ? especial.tipo : (p.subclasse||'');
+    return {
+    id:p.id, codigo:p.codigo, nome:p.produto, marca:p.laboratorio||'',
+    setor:subclasseCatalogo || p.classe || 'Higiene', subclasse:subclasseCatalogo,
+    categoriaDetalhe:(especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo)) ? (especial.categoria||'') : '',
+    eanReferencia:especial?.ean||'',
+    classeOriginal:p.classe||'', categoria: classeCatalogo,
+    // Pharmagno: preco_prazo = preço cheio; preco_vista = preço à vista/valor já descontado.
+    // Mantemos os dois separados para não exibir o mesmo valor duas vezes no WhatsApp.
+    preco:Number(p.preco_prazo ?? p.preco_vista ?? 0),
+    precoCheio:Number(p.preco_prazo ?? p.preco_vista ?? 0),
+    precoVista:Number(p.preco_vista ?? p.preco_prazo ?? 0),
+    estoque:Number(p.estoque||0),
+    descontoFixo:Number(p.desconto_fixo_pct||0), excecaoPromocao:p.excecao_promocao||'',
+    promocaoManual:p.promocao_manual||'', imagemUrl:p.imagem_url||'', icone:'✚', ativo:p.ativo!==false,
+    descricao:(especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo)) ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
+  };
+  });
+  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
+  dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
+  return true;
+}
+
+function renderCategorias() {
+  el.categorias.innerHTML = dados.categorias.map(c => `
+    <button class="category" data-category="${c.nome}">
+      <i>${c.icone}</i><b>${c.nome}</b><small>${c.descricao}</small>
+    </button>
+  `).join("");
+
+  el.categorias.querySelectorAll("[data-category]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos';
+      renderProdutos(btn.dataset.category);
+      document.querySelector("#ofertas").scrollIntoView({behavior:"smooth"});
+    });
+  });
+}
+
+function placeholderProduto(produto) {
+  const texto = `${produto.categoria || ''} ${produto.classeOriginal || ''} ${produto.setor || ''} ${produto.subclasse || ''} ${produto.nome || ''}`.toLowerCase();
+  let tipo = 'medicamentos';
+  let simbolo = '✚';
+  let titulo = 'Medicamentos';
+
+  if (/\b(mg|mcg|g\/?ml|mg\/?ml|comprimid|capsul|cápsul|xarope|suspens|solu[cç][aã]o|gotas?|oral|injet|ampola|paracetamol|dipirona|ibuprofeno|amoxicilina|azitromicina|loratadina|prednisolona)\b/i.test(texto)) {
+    tipo = 'medicamentos'; simbolo = '✚'; titulo = 'Medicamentos';
+  } else if (/infantil|beb[eê]|fralda|kids|pampers|huggies|mamadeira|chupeta|len[cç]o/.test(texto)) {
+    tipo = 'infantil'; simbolo = '♡'; titulo = 'Linha Infantil';
+  } else if (/perfum|cosm[eé]tic|maquiagem|perfume|desodorante|hidratante|shampoo|condicionador/.test(texto)) {
+    tipo = 'perfumaria'; simbolo = '✦'; titulo = 'Perfumaria & Cosméticos';
+  } else if (/suplement|vitamin|mineral|prote[ií]na|whey|creatina/.test(texto)) {
+    tipo = 'suplementos'; simbolo = '◆'; titulo = 'Vitaminas & Suplementos';
+  } else if (/higiene|absorvente|sabonete|escova|creme dental|fio dental|algod[aã]o|papel/.test(texto)) {
+    tipo = 'higiene'; simbolo = '◉'; titulo = 'Higiene & Cuidados';
+  }
+
+  return `<div class="product-placeholder ${tipo}" aria-label="${titulo}">
+    <span class="placeholder-symbol">${simbolo}</span>
+    <b>${titulo}</b>
+    <small>Foto não cadastrada</small>
+  </div>`;
+}
+
+function obterOfertaProduto(produto) {
+  const precoCheio = Number(produto.precoCheio ?? produto.preco ?? 0);
+  const precoVista = Number(produto.precoVista ?? precoCheio);
+
+  // Começa pelo menor preço real informado pelo Pharmagno.
+  let precoFinal = precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio;
+  let origem = precoFinal < precoCheio - 0.009 ? "Pharmagno / à vista" : "Preço normal";
+
+  // Promoções locais não são somadas entre si nem sobre o preço à vista.
+  // Comparamos as opções e usamos somente o menor preço final.
+  const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes);
+  if (Number(base.precoFinal) < precoFinal - 0.009) {
+    precoFinal = Number(base.precoFinal);
+    origem = base.promocao?.nome || "Promoção do site";
+  }
+
+  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
+    r.ativo && (
+      (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
+      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
+    )
+  );
+  const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
+  const melhorConfigurado = Math.max(descontoFixo, descontoGrupo);
+  const precoConfigurado = melhorConfigurado ? precoCheio * (1 - melhorConfigurado / 100) : precoCheio;
+  if (precoConfigurado < precoFinal - 0.009) {
+    precoFinal = precoConfigurado;
+    origem = "Promoção cadastrada";
+  }
+
+  const desconto = precoCheio > 0 && precoFinal < precoCheio - 0.009
+    ? ((precoCheio - precoFinal) / precoCheio) * 100
+    : 0;
+
+  return {precoCheio, precoFinal, desconto, origem};
+}
+
+function cardProduto(produto) {
+  const oferta = obterOfertaProduto(produto);
+
+  return `
+    <article class="product">
+      ${oferta.desconto ? `<span class="discount">-${Math.round(oferta.desconto)}%</span>` : ""}
+      <div class="product-visual">${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}</div>
+      <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
+      <h3>${produto.nome}</h3>
+      <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
+      <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
+      <p>${produto.descricao}</p>
+      <div class="product-bottom">
+        <div class="price-box">
+          ${oferta.desconto ? `<del>${moeda(oferta.precoCheio)}</del>` : ""}
+          <strong>${moeda(oferta.precoFinal)}</strong>
+        </div>
+        <button class="add" data-add="${produto.id}" aria-label="Adicionar ${produto.nome}">+</button>
+      </div>
+    </article>`;
+}
+
+function renderPaginacao(totalItens) {
+  let area = document.querySelector("#catalogPagination");
+  if (!area) {
+    area = document.createElement("nav");
+    area.id = "catalogPagination";
+    area.className = "catalog-pagination";
+    area.setAttribute("aria-label", "Paginação do catálogo");
+    el.produtos.insertAdjacentElement("afterend", area);
+  }
+
+  const totalPaginas = Math.ceil(totalItens / PRODUTOS_POR_PAGINA);
+  if (totalPaginas <= 1) {
+    area.innerHTML = "";
+    area.classList.add("hidden");
+    return;
+  }
+  area.classList.remove("hidden");
+
+  const paginas = [];
+  const adicionarPagina = n => paginas.push(`<button class="page-btn ${n === paginaAtual ? "active" : ""}" data-page="${n}">${n}</button>`);
+  const adicionarReticencias = () => paginas.push('<span class="page-dots">…</span>');
+
+  paginas.push(`<button class="page-btn page-nav" data-page="${paginaAtual - 1}" ${paginaAtual === 1 ? "disabled" : ""}>← Anterior</button>`);
+
+  if (totalPaginas <= 7) {
+    for (let i = 1; i <= totalPaginas; i++) adicionarPagina(i);
+  } else {
+    adicionarPagina(1);
+    if (paginaAtual > 4) adicionarReticencias();
+    const inicio = Math.max(2, paginaAtual - 1);
+    const fim = Math.min(totalPaginas - 1, paginaAtual + 1);
+    for (let i = inicio; i <= fim; i++) adicionarPagina(i);
+    if (paginaAtual < totalPaginas - 3) adicionarReticencias();
+    adicionarPagina(totalPaginas);
+  }
+
+  paginas.push(`<button class="page-btn page-nav" data-page="${paginaAtual + 1}" ${paginaAtual === totalPaginas ? "disabled" : ""}>Próxima →</button>`);
+  area.innerHTML = paginas.join("");
+
+  area.querySelectorAll("[data-page]:not([disabled])").forEach(btn => {
+    btn.addEventListener("click", () => {
+      paginaAtual = Number(btn.dataset.page);
+      renderProdutos(filtroAtual, termoAtual, false);
+      document.querySelector("#ofertas")?.scrollIntoView({behavior:"smooth", block:"start"});
+    });
+  });
+}
+
+function renderSubfiltrosCatalogo(listaBase) {
+  if (!el.subfiltros) return;
+  if (!['Perfumaria','Cosméticos'].includes(filtroAtual)) {
+    el.subfiltros.innerHTML = '';
+    el.subfiltros.classList.add('hidden');
+    return;
+  }
+  const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  el.subfiltros.classList.remove('hidden');
+  el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
+  el.subfiltros.querySelectorAll('[data-detalhe-beleza]').forEach(b=>b.onclick=()=>{detalheBelezaAtual=b.dataset.detalheBeleza;renderProdutos(filtroAtual,termoAtual)});
+}
+
+
+function categoriaCatalogoSegura(produto) {
+  // A categoria já foi normalizada quando os dados chegaram do Pharmagno.
+  // Não reclassificamos pelo nome aqui, pois palavras como "sabonete", "creme"
+  // ou "algodão" faziam Cosméticos/Perfumaria serem puxados indevidamente para Higiene.
+  const categoria = produto?.categoria || '';
+  if (categoria === 'Medicamentos') return 'Medicamentos Éticos e Similares Equivalentes';
+  return categoria || 'Higiene';
+}
+
+function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
+  filtroAtual = filtro;
+  termoAtual = termo;
+  if (resetarPagina) paginaAtual = 1;
+
+  const listaCategoria = dados.produtos
+    .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
+    .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
+  renderSubfiltrosCatalogo(listaCategoria);
+  const lista = listaCategoria
+    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
+
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / PRODUTOS_POR_PAGINA));
+  if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+  const inicio = (paginaAtual - 1) * PRODUTOS_POR_PAGINA;
+  const pagina = lista.slice(inicio, inicio + PRODUTOS_POR_PAGINA);
+
+  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : "<p>Nenhum produto encontrado.</p>";
+  renderPaginacao(lista.length);
+
+  el.produtos.querySelectorAll("[data-add]").forEach(btn => {
+    btn.addEventListener("click", () => adicionar(Number(btn.dataset.add)));
+  });
+
+  const globais = dados.promocoes.filter(p => p.tipo === "site" && promocaoEstaValida(p));
+  if (globais.length) {
+    const maior = globais.reduce((a,b)=>Number(b.desconto)>Number(a.desconto)?b:a);
+    el.promo.innerHTML = `<b>${maior.nome}</b> — ${maior.desconto}% de desconto em produtos participantes de todo o site.`;
+    el.promo.classList.remove("hidden");
+  } else {
+    el.promo.classList.add("hidden");
+  }
+}
+
+function adicionar(id) {
+  const produto = dados.produtos.find(p => p.id === id);
+  if (!produto) return;
+
+  const estoque = Math.max(0, Number(produto.estoque || 0));
+  if (estoque < 1) return alert("Produto sem estoque no momento.");
+
+  const existente = sacola.find(p => String(p.id) === String(id));
+  if (existente) {
+    const atual = Number(existente.quantidade || 1);
+    if (atual >= estoque) return alert(`Há somente ${estoque} unidade(s) disponível(is) em estoque.`);
+    existente.quantidade = atual + 1;
+    existente.qtd = existente.quantidade;
+  } else {
+    const oferta = obterOfertaProduto(produto);
+    sacola.push({...produto, preco: oferta.precoCheio, precoCheio: oferta.precoCheio, precoFinal: oferta.precoFinal, quantidade: 1, qtd: 1});
+  }
+  atualizarSacola();
+}
+
+function remover(indice) {
+  sacola.splice(indice,1);
+  atualizarSacola();
+}
+
+function alterarQuantidade(indice, novaQuantidade) {
+  const item = sacola[indice];
+  if (!item) return;
+  const estoque = Math.max(0, Number(item.estoque || 0));
+  const quantidade = Math.max(1, Math.min(estoque, Number(novaQuantidade) || 1));
+  item.quantidade = quantidade;
+  item.qtd = quantidade;
+  atualizarSacola();
+}
+
+function atualizarSacola() {
+  const totalItens = sacola.reduce((t,p)=>t + Number(p.quantidade || p.qtd || 1), 0);
+  el.contador.textContent = totalItens;
+
+  el.itens.innerHTML = sacola.length
+    ? sacola.map((p,i)=>{
+      const estoque = Math.max(0, Number(p.estoque || 0));
+      const quantidade = Math.max(1, Math.min(estoque || 1, Number(p.quantidade || p.qtd || 1)));
+      p.quantidade = quantidade;
+      p.qtd = quantidade;
+      return `
+      <div class="bag-item">
+        <div class="bag-item-info"><span>${p.nome}</span><small>${p.marca || ""}</small>
+          <div class="cart-stock-box">
+            <span>Em estoque: <strong>${estoque} un.</strong></span>
+            <div class="qty-control" aria-label="Selecionar quantidade">
+              <button type="button" class="qty-btn" data-qty-minus="${i}" ${quantidade <= 1 ? "disabled" : ""}>−</button>
+              <input class="cart-qty-input" data-qty-input="${i}" type="number" min="1" max="${estoque}" value="${quantidade}" aria-label="Quantidade de ${p.nome}">
+              <button type="button" class="qty-btn" data-qty-plus="${i}" ${quantidade >= estoque ? "disabled" : ""}>+</button>
+            </div>
+          </div>
+        </div>
+        <div class="bag-item-price"><strong>${moeda(Number(p.precoFinal || 0) * quantidade)}</strong><button data-remove="${i}">remover</button></div>
+      </div>`;
+    }).join("")
+    : "<p>Sua sacola está vazia.</p>";
+
+  el.total.textContent = moeda(sacola.reduce((t,p)=>t + Number(p.precoFinal || 0) * Number(p.quantidade || p.qtd || 1),0));
+
+  el.itens.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click",()=>remover(Number(btn.dataset.remove)));
+  });
+  el.itens.querySelectorAll("[data-qty-minus]").forEach(btn => {
+    btn.addEventListener("click",()=>{
+      const i=Number(btn.dataset.qtyMinus), atual=Number(sacola[i]?.quantidade || 1);
+      alterarQuantidade(i, atual-1);
+    });
+  });
+  el.itens.querySelectorAll("[data-qty-plus]").forEach(btn => {
+    btn.addEventListener("click",()=>{
+      const i=Number(btn.dataset.qtyPlus), atual=Number(sacola[i]?.quantidade || 1);
+      alterarQuantidade(i, atual+1);
+    });
+  });
+  el.itens.querySelectorAll("[data-qty-input]").forEach(input => {
+    input.addEventListener("change",()=>alterarQuantidade(Number(input.dataset.qtyInput), input.value));
+  });
+}
+
+function abrirSacola() {
+  el.drawer.classList.add("open");
+  el.backdrop.classList.add("open");
+}
+
+function fecharSacola() {
+  el.drawer.classList.remove("open");
+  el.backdrop.classList.remove("open");
+}
+
+async function carregarConfiguracoesLoja(){
+  const cfg=window.SUPABASE_CONFIG;
+  if(!cfg?.url||!cfg?.key)return;
+  try{
+    const r=await fetch(`${cfg.url}/rest/v1/configuracoes_loja?chave=eq.operacao&select=valor&limit=1`,{headers:{apikey:cfg.key,Authorization:`Bearer ${cfg.key}`}});
+    if(!r.ok)return;
+    const rows=await r.json();
+    if(rows?.[0]?.valor){
+      const remoto=typeof rows[0].valor==='string'?JSON.parse(rows[0].valor):rows[0].valor;
+      if(Array.isArray(remoto.entregas))dados.entregas=remoto.entregas;
+      if(remoto.configuracoes)dados.configuracoes={...(dados.configuracoes||{}),...remoto.configuracoes};
+      if(Array.isArray(remoto.kits))dados.kits=remoto.kits;
+      if(Array.isArray(remoto.sorteios))dados.sorteios=remoto.sorteios;
+    }
+  }catch(e){console.warn('Configurações da loja indisponíveis; usando contingência local.',e)}
+}
+
+function renderEntregas() {
+  const icones = {retirada:"⌂",whatsapp:"◉",parceiro:"↗"};
+
+  el.entregas.innerHTML = dados.entregas.filter(e=>e.ativo).map(e => {
+    let href = "#";
+    if (e.tipo === "whatsapp") href = linkWhatsapp("Olá! Gostaria de informações sobre entrega.");
+    else if (e.url) href = e.url;
+
+    return `<a class="delivery-card" href="${href}" ${href !== "#" ? 'target="_blank" rel="noopener"' : ""}>
+      <span>${icones[e.tipo] || "↗"}</span>
+      <b>${e.nome}</b><small>${e.descricao}</small>
+    </a>`;
+  }).join("");
+}
+
+function finalizar() {
+  if (!sacola.length) return alert("Adicione pelo menos um produto à sacola.");
+
+  const linhas = sacola.map(p => {
+    const quantidade = Number(p.quantidade || p.qtd || 1);
+    const precoCheio = Number(p.precoCheio ?? p.preco ?? 0);
+    const precoFinal = Number(p.precoFinal ?? p.preco ?? 0);
+    const temDesconto = precoFinal < precoCheio - 0.009;
+
+    if (temDesconto) {
+      const percentual = precoCheio > 0 ? Math.round((1 - precoFinal / precoCheio) * 100) : 0;
+      return `• ${p.nome}
+Quantidade: ${quantidade}
+Preço cheio unitário: ${moeda(precoCheio)}
+Preço com desconto unitário${percentual ? ` (${percentual}% OFF)` : ""}: ${moeda(precoFinal)}
+Subtotal: ${moeda(precoFinal * quantidade)}`;
+    }
+
+    return `• ${p.nome}
+Quantidade: ${quantidade}
+Preço unitário: ${moeda(precoFinal)}
+Subtotal: ${moeda(precoFinal * quantidade)}`;
+  }).join(`\n\n`);
+
+  const mensagem = `Olá! Gostaria de consultar este pedido:
+
+${linhas}
+
+Podem confirmar disponibilidade, valor final e opções de entrega?`;
+  window.open(linkWhatsapp(mensagem),"_blank","noopener");
+}
+
+document.querySelector("#bagOpen").addEventListener("click",abrirSacola);
+document.querySelector("#bagClose").addEventListener("click",fecharSacola);
+el.backdrop.addEventListener("click",fecharSacola);
+document.querySelector("#checkout").addEventListener("click",finalizar);
+
+function normalizarBusca(txt) {
+  return String(txt || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function garantirSugestoesBusca() {
+  let box = document.querySelector("#searchSuggestions");
+  if (box) return box;
+  box = document.createElement("div");
+  box.id = "searchSuggestions";
+  box.className = "search-suggestions";
+  el.busca.parentElement.style.position = "relative";
+  el.busca.insertAdjacentElement("afterend", box);
+  return box;
+}
+
+function atualizarSugestoesBusca() {
+  const box = garantirSugestoesBusca();
+  const termo = normalizarBusca(el.busca.value);
+  if (termo.length < 2) {
+    box.innerHTML = "";
+    box.classList.remove("open");
+    return;
+  }
+
+  const inicio = [];
+  const contem = [];
+  const vistos = new Set();
+
+  dados.produtos
+    .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .forEach(p => {
+      const nome = String(p.nome || "").trim();
+      const chave = normalizarBusca(nome);
+      if (!nome || vistos.has(chave) || !chave.includes(termo)) return;
+      vistos.add(chave);
+      (chave.startsWith(termo) ? inicio : contem).push(nome);
+    });
+
+  const sugestoes = [...inicio, ...contem].slice(0, 8);
+  if (!sugestoes.length) {
+    box.innerHTML = "";
+    box.classList.remove("open");
+    return;
+  }
+
+  box.innerHTML = sugestoes.map(nome =>
+    `<button type="button" class="search-suggestion" data-search-suggestion="${encodeURIComponent(nome)}"><span>⌕</span><b>${nome}</b></button>`
+  ).join("");
+  box.classList.add("open");
+
+  box.querySelectorAll("[data-search-suggestion]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const nome = decodeURIComponent(btn.dataset.searchSuggestion);
+      el.busca.value = nome;
+      box.classList.remove("open");
+      renderProdutos("Todos", nome);
+      document.querySelector("#ofertas")?.scrollIntoView({behavior:"smooth"});
+    });
+  });
+}
+
+document.querySelector("#searchToggle").addEventListener("click",()=>{el.searchbar.classList.toggle("open");el.busca.focus()});
+document.querySelector("#searchClose").addEventListener("click",()=>{el.searchbar.classList.remove("open");document.querySelector("#searchSuggestions")?.classList.remove("open")});
+el.busca.addEventListener("input",()=>{atualizarSugestoesBusca();renderProdutos("Todos",el.busca.value)});
+document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>renderProdutos(b.dataset.filter)));
+
+const atendimento = linkWhatsapp("Olá! Gostaria de atendimento da Farmácia Mais Econômica.");
+document.querySelector("#heroWhatsapp").href = atendimento;
+document.querySelector("#serviceWhatsapp").href = atendimento;
+
+
+function renderKits() {
+  const area = document.querySelector("#kitGrid");
+  if (!area) return;
+
+  const kits = (dados.kits || []).filter(k => k.ativo);
+  area.innerHTML = kits.length ? kits.map(k => `
+    <article class="kit-card">
+      <div class="kit-visual">${k.icone || "✦"}</div>
+      <div>
+        <span class="kicker">${k.destaque || "KIT ESPECIAL"}</span>
+        <h3>${k.nome}</h3>
+        <p>${k.descricao}</p>
+        <div class="kit-price">
+          ${k.precoOriginal ? `<del>${moeda(k.precoOriginal)}</del>` : ""}
+          <strong>${moeda(k.preco)}</strong>
+        </div>
+        <button class="btn primary" data-kit="${k.id}">Consultar kit</button>
+      </div>
+    </article>`).join("") : "<p>Nenhum kit ativo no momento.</p>";
+
+  area.querySelectorAll("[data-kit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
+      const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
+      window.open(linkWhatsapp(msg), "_blank", "noopener");
+    });
+  });
+}
+
+function renderSorteios() {
+  const area = document.querySelector("#giveawayGrid");
+  if (!area) return;
+
+  const sorteios = (dados.sorteios || []).filter(s => s.ativo);
+  area.innerHTML = sorteios.length ? sorteios.map(s => `
+    <article class="giveaway-card">
+      <span class="kicker light">SORTEIO / CAMPANHA</span>
+      <h3>${s.titulo}</h3>
+      <div class="period">${s.inicio || "Data a definir"} → ${s.fim || "Data a definir"}</div>
+      <p><b>Prêmio:</b> ${s.premio}</p>
+      <p>${s.descricao}</p>
+      <details><summary>Ver regulamento informado</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>
+    </article>`).join("") : "<p>Nenhum sorteio ativo no momento.</p>";
+}
+
+let realtimeClient = null;
+let realtimeTimer = null;
+let recargaEmAndamento = false;
+
+function sincronizarSacolaComCatalogo() {
+  if (!sacola.length) return;
+  sacola = sacola.map(item => {
+    const atual = dados.produtos.find(p => String(p.id) === String(item.id));
+    if (!atual) return item;
+    const oferta = obterOfertaProduto(atual);
+    return {...item, ...atual, preco: oferta.precoCheio, precoCheio: oferta.precoCheio, precoFinal: oferta.precoFinal};
+  });
+  atualizarSacola();
+}
+
+async function recarregarCatalogoAutomaticamente() {
+  if (recargaEmAndamento) return;
+  recargaEmAndamento = true;
+  try {
+    await carregarCatalogoSupabase();
+    renderCategorias();
+    renderProdutos(filtroAtual, termoAtual, false);
+    sincronizarSacolaComCatalogo();
+  } catch (erro) {
+    console.warn("Atualização automática do catálogo falhou:", erro);
+  } finally {
+    recargaEmAndamento = false;
+  }
+}
+
+function agendarRecargaRealtime() {
+  clearTimeout(realtimeTimer);
+  realtimeTimer = setTimeout(recarregarCatalogoAutomaticamente, 800);
+}
+
+function ativarAtualizacaoAutomatica() {
+  const cfg = window.SUPABASE_CONFIG;
+
+  // Atualização imediata quando o Supabase Realtime estiver habilitado na tabela.
+  if (window.supabase?.createClient && cfg?.url && cfg?.key) {
+    try {
+      realtimeClient = window.supabase.createClient(cfg.url, cfg.key, {
+        auth: {persistSession:false, autoRefreshToken:false}
+      });
+      realtimeClient
+        .channel("farmacia-catalogo-tempo-real")
+        .on("postgres_changes", {event:"*", schema:"public", table:"produtos_pharmagno"}, agendarRecargaRealtime)
+        .on("postgres_changes", {event:"*", schema:"public", table:"promocoes_catalogo"}, agendarRecargaRealtime)
+        .subscribe();
+    } catch (erro) {
+      console.warn("Realtime indisponível; usando atualização periódica.", erro);
+    }
+  }
+
+  // Segurança: atualiza quando o cliente volta para a aba e a cada 60 s.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") recarregarCatalogoAutomaticamente();
+  });
+  window.addEventListener("focus", recarregarCatalogoAutomaticamente);
+  setInterval(recarregarCatalogoAutomaticamente, 60000);
+}
+
+async function iniciarLoja() {
+  await carregarConfiguracoesLoja();
+  try {
+    await carregarCatalogoSupabase();
+  } catch (erro) {
+    console.error("Falha ao carregar catálogo do Supabase:", erro);
+    const aviso = document.querySelector("#activePromo");
+    if (aviso) {
+      aviso.innerHTML = "Não foi possível sincronizar o catálogo agora. Exibindo dados locais de contingência.";
+      aviso.classList.remove("hidden");
+    }
+  }
+  renderCategorias();
+  renderProdutos();
+  renderKits();
+  renderSorteios();
+  renderEntregas();
+  atualizarSacola();
+  ativarAtualizacaoAutomatica();
+}
+
+iniciarLoja();
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#searchbar")) {
+    document.querySelector("#searchSuggestions")?.classList.remove("open");
+  }
+});
+

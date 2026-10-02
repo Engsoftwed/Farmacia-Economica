@@ -1,0 +1,16 @@
+FARMÁCIA + ECONÔMICA — ATUALIZAÇÃO V2
+
+O que foi acrescentado:
+- Promoção por CLASSE inteira.
+- Promoção por SUBCLASSE.
+- Classe e subclasse continuam editáveis por produto.
+- Exceção individual do produto continua tendo prioridade e impede desconto de grupo.
+- Login continua: +economica (a senha fica no Supabase Auth, não no código).
+
+IMPORTANTE AO SUBSTITUIR O SITE:
+Substituir os arquivos do site NÃO apaga o Supabase. Produtos, usuário Auth, preços, estoque, classes e dados já importados ficam no banco.
+
+ÚNICA ETAPA NOVA NO SUPABASE:
+Execute novamente o arquivo SUPABASE_ADMIN_SETUP.sql no SQL Editor. Ele usa IF NOT EXISTS / DROP POLICY IF EXISTS e pode ser executado sobre a configuração atual. Isso cria a nova tabela promocoes_catalogo e as políticas necessárias.
+
+Depois publique/substitua os arquivos do site e entre no painel > Promoções > Nova promoção.

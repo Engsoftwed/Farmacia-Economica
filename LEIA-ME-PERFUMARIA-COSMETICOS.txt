@@ -1,0 +1,25 @@
+FARMÁCIA MAIS ECONÔMICA — PERFUMARIA E COSMÉTICOS
+
+Esta versão mantém Pharmagno, Supabase, WhatsApp, logo e painel da versão anterior.
+
+NOVO:
+- Categoria principal: Perfumaria e Cosméticos.
+- Duas subclasses: Perfumaria e Cosméticos.
+- Categorias específicas vindas da planilha CATALOGO_Perfumaria_Cosmeticos.xlsx.
+- A vitrine cria filtros automáticos para as duas subclasses e para cada categoria específica.
+- O painel reconhece automaticamente os produtos da lista pelo nome.
+- Botão “Organizar Perfumaria/Cosméticos” grava classe/subclasse no Supabase sem alterar preço ou estoque.
+- Foto continua manual e segura: Produtos Pharmagno > Editar / Foto > escolher arquivo > Enviar foto.
+- Cloudinary já está configurado no assets/js/config.js.
+- Produto sem foto continua mostrando símbolo profissional.
+- A sincronização do Pharmagno não sobrescreve imagem, classe ou subclasse.
+
+IMPORTANTE SOBRE FOTOS:
+As fotos não foram inventadas nem preenchidas automaticamente. Isso evita foto errada em produto farmacêutico/cosmético. O upload está pronto para uso e fica vinculado ao produto no Supabase.
+
+PASSO RÁPIDO:
+1. Publique/atualize o projeto.
+2. Entre em /admin.
+3. Clique em Produtos Pharmagno.
+4. Clique uma vez em “Organizar Perfumaria/Cosméticos”.
+5. Para foto: “Editar / Foto”, selecione a imagem e clique em “Enviar foto”.

@@ -1,0 +1,32 @@
+PAINEL INTEGRADO - FARMÁCIA + ECONÔMICA
+
+1) No Supabase > SQL Editor, execute SUPABASE_ADMIN_SETUP.sql.
+2) No Supabase > Authentication > Users, crie um usuário para o responsável da farmácia (e-mail + senha).
+3) Publique esta pasta no Netlify/servidor.
+4) Abra /admin/ e entre com o usuário criado.
+
+O painel edita no Supabase:
+- classe e subclasse
+- desconto fixo
+- exceção de promoção
+- promoção manual (ex.: Leve 2 por R$ X)
+- produto ativo/inativo
+
+Preço e estoque ficam somente leitura no painel para evitar divergência com o Pharmagno.
+A vitrine já lê produtos/preço/estoque do Supabase.
+
+IMPORTANTE: a sincronização automática Pharmagno -> Supabase ainda depende de uma fonte que o Pharmagno atualize automaticamente. Importar relatórios atualiza a base; não prometa tempo real sem essa etapa.
+
+
+LOGIN PERSONALIZADO
+- Na tela do painel, o login exibido é +economica.
+- Internamente, por segurança/compatibilidade com Supabase Auth, +economica corresponde a economica@wolftech.app.
+- Em Supabase > Authentication > Users, altere/crie o usuário com o e-mail economica@wolftech.app e mantenha a mesma senha desejada.
+- O cliente não precisa digitar nem ver esse e-mail; ele usa apenas +economica.
+
+CREDENCIAIS DEFINIDAS PELO RESPONSÁVEL
+Usuário visível no painel: +economica
+E-mail interno do Supabase Auth: economica@wolftech.app
+Senha definida: +economica2026
+
+IMPORTANTE: a senha não fica gravada no JavaScript do site. Configure esta mesma senha no usuário economica@wolftech.app em Supabase > Authentication > Users.

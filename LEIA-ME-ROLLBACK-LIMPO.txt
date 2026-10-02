@@ -1,0 +1,29 @@
+FARMÁCIA MAIS ECONÔMICA — VERSÃO LIMPA PÓS-INTEGRAÇÃO
+
+Esta versão foi reconstruída para ficar no ponto imediatamente após a integração com o Pharmagno/Supabase e antes do catalogador de fotos.
+
+MANTIDO:
+- conexão Supabase já configurada em assets/js/config.js;
+- tabela produtos_pharmagno;
+- preços, estoque, classes, subclasses e promoções;
+- carrinho e envio para WhatsApp;
+- painel administrativo;
+- upload manual de foto pelo Cloudinary;
+- kits, sorteios e opções de entrega existentes.
+
+REMOVIDO:
+- catalogador de imagens;
+- busca automática de foto por EAN;
+- marcação foto_consultada/foto_consultada_em no frontend;
+- dependência de catálogo externo de imagens;
+- arquivos de configuração exclusivos da fase automática de fotos.
+
+COMO AS FOTOS FUNCIONAM AGORA:
+1. Produto sem imagem = o site exibe um símbolo/placeholder profissional.
+2. No painel, abra Produtos Pharmagno > Editar / Foto.
+3. Envie uma foto do dispositivo ou cole uma URL.
+4. Ao salvar, a imagem substitui o símbolo apenas naquele produto.
+5. Removendo a URL da imagem, o produto volta a mostrar o símbolo.
+
+IMPORTANTE:
+Não é necessário refazer a integração do Pharmagno. As credenciais existentes foram preservadas.

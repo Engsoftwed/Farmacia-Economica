@@ -1,0 +1,1 @@
+Correções: estoque e seletor de quantidade no carrinho; quantidade limitada ao estoque; regra reforçada para medicamentos não aparecerem em Higiene. Não altera o sincronizador instalado na farmácia.

@@ -1,0 +1,14 @@
+INTEGRAÇÃO AUTOMÁTICA PHARMAGNO -> SITE
+
+Foi adicionada a pasta:
+  sincronizador-pharmagno/
+
+Ela deve ser instalada SOMENTE no computador/servidor da farmácia que acessa o banco Firebird do Pharmagno.
+Não publique essa pasta no Netlify.
+
+Depois de configurada, a atualização segue:
+Pharmagno -> Firebird -> Sincronizador -> Supabase -> Realtime -> Site
+
+O sincronizador NÃO altera fotos e personalizações do painel; ele atualiza os dados operacionais (preço, promoção, estoque e nome, quando habilitado).
+
+Antes de entregar ao cliente, faça um teste real alterando temporariamente o preço de um produto no Pharmagno e confirme a mudança no site.
