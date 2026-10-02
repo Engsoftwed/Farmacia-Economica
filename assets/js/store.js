@@ -44,39 +44,51 @@ function linkWhatsapp(mensagem) {
 }
 
 function categoriaLoja(p) {
-  const classe = (p.classe || '').trim();
-  const subclasse = (p.subclasse || '').trim();
-  const t = `${p.produto || ''} ${p.laboratorio || ''} ${classe} ${subclasse}`.toLowerCase();
+  const classe = String(p.classe || '').trim();
+  const subclasse = String(p.subclasse || '').trim();
+  const texto = `${p.produto || ''} ${p.laboratorio || ''} ${classe} ${subclasse}`
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  // 1) Medicamento sempre tem prioridade. Assim um remédio nunca cai em Higiene,
-  // Infantil, Perfumaria ou Cosméticos só por conter uma palavra genérica no nome.
-  const pareceMedicamento = /\b(mg|mcg|ui|comprimid|capsul|cápsul|xarope|suspens|solu[cç][aã]o|gotas?|injet|ampola|antibi[oó]tico|analg[eé]sico|antit[eé]rmico|anti[- ]?inflamat[oó]rio|antial[eé]rgico|verm[ií]fugo|suposit[oó]rio|col[ií]rio|dipirona|paracetamol|ibuprofeno|amoxicilina|azitromicina|loratadina|prednisolona|simeticona|acetilciste[ií]na|ambroxol|dexclorfeniramina|nimesulida|cetirizina|desloratadina|albel|albendazol)\b/i.test(t);
-  if (/medicamento|[eé]tico|gen[eé]rico|similar/i.test(classe) || pareceMedicamento) {
+  // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
+  // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
+  const medicamentoPeloProduto =
+    /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
+    /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
+    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
+  if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
+
+  // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
+  // Ex.: absorventes não devem virar medicamentos só porque a classe de origem veio errada.
+  const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
+  if (especial) return especial.tipo;
+
+  // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
+  // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
+  // Ex.: ABS.ENLACE / absorventes nunca devem aparecer em Medicamentos.
+  const higienePeloNome =
+    /\b(ABSORVENTE|PROTETOR DIARIO|ALGODAO|COTONETE|HASTE FLEXIVEL|PAPEL HIGIENICO|FRALDA GERIATRICA|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE)\b/.test(nome) ||
+    /^(ABS[. _-]|ABSORB)/.test(nome);
+  if (higienePeloNome) return 'Higiene';
+
+  // 4) Só depois das exceções por produto respeitamos a classe farmacêutica do Pharmagno.
+  const classeSub = `${classe} ${subclasse}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (/MEDICAMENT|ETIC|GENERICO|SIMILAR|FARMACO/.test(classeSub)) {
     return 'Medicamentos Éticos e Similares Equivalentes';
   }
 
-  // 2) O catálogo curado separa Perfumaria/Cosméticos. Itens de cuidados do bebê
-  // entram em Infantil, para a seção não ficar vazia ou limitada a fraldas.
-  const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
-  if (especial) {
-    if (/beb[eê]/i.test(especial.categoria || '')) return 'Infantil';
-    return especial.tipo;
-  }
+  const infantil = /\b(FRALDA|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|LENCO UMEDECIDO|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|ABSORVENTE SEIO|ESCOVA INFANTIL|PENTE INFANTIL)\b/.test(texto);
+  if (infantil) return 'Infantil';
 
-  // 3) Itens infantis não medicamentosos.
-  const infantilSeguro = ['fralda','pampers','huggies','babysec','isababy','piquitucho','pompom','lenço umedecido','lenco umedecido','mamadeira','chupeta','bico','absorvente seio','escova infantil','pente infantil','talco bebe','talco bebê','baby','bebe','bebê','xuxinha'];
-  if (infantilSeguro.some(k => t.includes(k))) return 'Infantil';
+  const classeNorm = classe.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (/COSMET/.test(classeNorm)) return 'Cosméticos';
+  if (/PERFUM/.test(classeNorm)) return 'Perfumaria';
+  if (/HIGIENE/.test(classeNorm)) return 'Higiene';
+  if (/INFANTIL/.test(classeNorm)) return 'Infantil';
 
-  // 4) Mantém classes válidas vindas do Pharmagno.
-  if (classe && classe !== 'Não classificado' && classe !== 'Infantil') return classe;
-
-  // 5) Fallback apenas para itens realmente de higiene.
-  const higiene = ['absorvente','sabonete','shampoo','condicionador','creme dental','pasta dental','escova dental','fio dental','enxaguante','algodao','algodão','cotonete','papel higienico','papel higiênico','haste flexivel','haste flexível'];
-  if (higiene.some(k => t.includes(k))) return 'Higiene';
-
-  return classe === 'Infantil' ? 'Infantil' : 'Higiene';
+  if (/\b(ABSORVENTE|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE|ALGODAO|COTONETE|PAPEL HIGIENICO|PROTETOR DIARIO|HASTE FLEXIVEL)\b/.test(texto)) return 'Higiene';
+  return 'Higiene';
 }
-
 async function carregarTodasPaginas(base, headers) {
   const todos = [];
   for (let ini = 0; ; ini += 1000) {
@@ -102,13 +114,14 @@ async function carregarCatalogoSupabase() {
   dados.produtos = linhas.map(p => {
     const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
     const classeCatalogo = categoriaLoja(p);
-    const subclasseCatalogo = ['Perfumaria','Cosméticos'].includes(classeCatalogo) && especial ? especial.tipo : (p.subclasse||'');
+    const usaCatalogoBeleza = especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo);
+    const subclasseCatalogo = usaCatalogoBeleza ? especial.tipo : (p.subclasse||'');
     return {
     id:p.id, codigo:p.codigo, nome:p.produto, marca:p.laboratorio||'',
     setor:subclasseCatalogo || p.classe || 'Higiene', subclasse:subclasseCatalogo,
-    categoriaDetalhe:(especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo)) ? (especial.categoria||'') : '',
-    eanReferencia:especial?.ean||'',
-    classeOriginal:p.classe||'', categoria: classeCatalogo,
+    categoriaDetalhe:usaCatalogoBeleza ? (especial?.categoria||'') : '',
+    eanReferencia:usaCatalogoBeleza ? (especial?.ean||'') : '',
+    classeOriginal:usaCatalogoBeleza ? 'Perfumaria e Cosméticos' : (p.classe||''), categoria: classeCatalogo,
     // Pharmagno: preco_prazo = preço cheio; preco_vista = preço à vista/valor já descontado.
     // Mantemos os dois separados para não exibir o mesmo valor duas vezes no WhatsApp.
     preco:Number(p.preco_prazo ?? p.preco_vista ?? 0),
@@ -117,7 +130,7 @@ async function carregarCatalogoSupabase() {
     estoque:Number(p.estoque||0),
     descontoFixo:Number(p.desconto_fixo_pct||0), excecaoPromocao:p.excecao_promocao||'',
     promocaoManual:p.promocao_manual||'', imagemUrl:p.imagem_url||'', icone:'✚', ativo:p.ativo!==false,
-    descricao:(especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo)) ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
+    descricao:usaCatalogoBeleza ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
   };
   });
   const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
@@ -142,21 +155,19 @@ function renderCategorias() {
 }
 
 function placeholderProduto(produto) {
-  const texto = `${produto.categoria || ''} ${produto.classeOriginal || ''} ${produto.setor || ''} ${produto.subclasse || ''} ${produto.nome || ''}`.toLowerCase();
-  let tipo = 'medicamentos';
-  let simbolo = '✚';
-  let titulo = 'Medicamentos';
+  // O placeholder segue a categoria FINAL do catálogo, não palavras soltas do nome.
+  // Assim "ACEBROFILINA ... INFANTIL" continua com símbolo de Medicamentos.
+  const categoria = String(produto.categoria || 'Higiene');
+  let tipo = 'higiene', simbolo = '◉', titulo = 'Higiene & Cuidados';
 
-  if (/\b(mg|mcg|g\/?ml|mg\/?ml|comprimid|capsul|cápsul|xarope|suspens|solu[cç][aã]o|gotas?|oral|injet|ampola|paracetamol|dipirona|ibuprofeno|amoxicilina|azitromicina|loratadina|prednisolona)\b/i.test(texto)) {
+  if (categoria === 'Medicamentos Éticos e Similares Equivalentes') {
     tipo = 'medicamentos'; simbolo = '✚'; titulo = 'Medicamentos';
-  } else if (/infantil|beb[eê]|fralda|kids|pampers|huggies|mamadeira|chupeta|len[cç]o/.test(texto)) {
+  } else if (categoria === 'Infantil') {
     tipo = 'infantil'; simbolo = '♡'; titulo = 'Linha Infantil';
-  } else if (/perfum|cosm[eé]tic|maquiagem|perfume|desodorante|hidratante|shampoo|condicionador/.test(texto)) {
-    tipo = 'perfumaria'; simbolo = '✦'; titulo = 'Perfumaria & Cosméticos';
-  } else if (/suplement|vitamin|mineral|prote[ií]na|whey|creatina/.test(texto)) {
+  } else if (categoria === 'Perfumaria' || categoria === 'Cosméticos') {
+    tipo = 'perfumaria'; simbolo = '✦'; titulo = categoria;
+  } else if (/suplement/i.test(categoria)) {
     tipo = 'suplementos'; simbolo = '◆'; titulo = 'Vitaminas & Suplementos';
-  } else if (/higiene|absorvente|sabonete|escova|creme dental|fio dental|algod[aã]o|papel/.test(texto)) {
-    tipo = 'higiene'; simbolo = '◉'; titulo = 'Higiene & Cuidados';
   }
 
   return `<div class="product-placeholder ${tipo}" aria-label="${titulo}">
@@ -165,7 +176,6 @@ function placeholderProduto(produto) {
     <small>Foto não cadastrada</small>
   </div>`;
 }
-
 function obterOfertaProduto(produto) {
   const precoCheio = Number(produto.precoCheio ?? produto.preco ?? 0);
   const precoVista = Number(produto.precoVista ?? precoCheio);
@@ -289,12 +299,9 @@ function renderSubfiltrosCatalogo(listaBase) {
 
 
 function categoriaCatalogoSegura(produto) {
-  // A categoria já foi normalizada quando os dados chegaram do Pharmagno.
-  // Não reclassificamos pelo nome aqui, pois palavras como "sabonete", "creme"
-  // ou "algodão" faziam Cosméticos/Perfumaria serem puxados indevidamente para Higiene.
-  const categoria = produto?.categoria || '';
-  if (categoria === 'Medicamentos') return 'Medicamentos Éticos e Similares Equivalentes';
-  return categoria || 'Higiene';
+  // A categoria já foi definida uma única vez em categoriaLoja().
+  // Não reclassificar aqui: a lógica antiga era a causa de medicamentos aparecerem em Higiene.
+  return produto?.categoria || "Higiene";
 }
 
 function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
