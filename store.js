@@ -192,12 +192,17 @@ function obterOfertaProduto(produto) {
     origem = base.promocao?.nome || "Promoção do site";
   }
 
-  // Regra comercial da Farmácia + Econômica: TODO medicamento recebe no mínimo 10% OFF.
-  // A regra é aplicada na vitrine mesmo quando o cadastro antigo veio sem desconto.
-  const ehMedicamento = produto.categoria === "Medicamentos Éticos e Similares Equivalentes";
-  const descontoMinimoMedicamento = ehMedicamento ? 10 : 0;
+  // Regra comercial da Farmácia + Econômica:
+  // Medicamentos, Perfumaria e Cosméticos recebem no mínimo 10% OFF na vitrine.
+  // Isso também corrige itens antigos que vieram do Pharmagno sem desconto configurado.
+  const categoriaComDescontoMinimo = [
+    "Medicamentos Éticos e Similares Equivalentes",
+    "Perfumaria",
+    "Cosméticos"
+  ].includes(produto.categoria);
+  const descontoMinimoCategoria = categoriaComDescontoMinimo ? 10 : 0;
   const descontoFixoCadastrado = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
-  const descontoFixo = Math.max(descontoMinimoMedicamento, descontoFixoCadastrado);
+  const descontoFixo = Math.max(descontoMinimoCategoria, descontoFixoCadastrado);
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
       (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
@@ -327,7 +332,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   const inicio = (paginaAtual - 1) * PRODUTOS_POR_PAGINA;
   const pagina = lista.slice(inicio, inicio + PRODUTOS_POR_PAGINA);
 
-  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : `<div class="order-empty"><h3>Nenhum produto encontrado.</h3><p>${termoAtual ? `Não encontramos “${String(termoAtual).replace(/[<>]/g, "")}” no estoque disponível.` : "Não há produtos disponíveis neste filtro."}</p><button class="btn primary" type="button" data-open-order>Solicitar encomenda</button></div>`;
+  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : `<div class="order-empty"><h3>Nenhum produto encontrado.</h3><p>${termoAtual ? `Não encontramos “${String(termoAtual).replace(/[<>]/g, "")}” no estoque disponível.` : "Não há produtos disponíveis neste filtro."}</p><a class="btn primary" href="#orderModal" data-open-order>Solicitar encomenda</a></div>`;
   renderPaginacao(lista.length);
 
   el.produtos.querySelectorAll("[data-add]").forEach(btn => {
