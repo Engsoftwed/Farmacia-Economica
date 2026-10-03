@@ -103,6 +103,14 @@
 /* Encomenda de medicamento */
 .order-request{margin:24px 0 0;padding:22px;border:1px dashed #d8c9c6;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px}.order-request h3{margin:0 0 5px;font:800 18px Manrope}.order-request p{margin:0;color:#777;font-size:13px}.order-request.hidden{display:none}.order-modal-backdrop{position:fixed;inset:0;background:#0008;z-index:90;display:none;align-items:center;justify-content:center;padding:20px}.order-modal-backdrop.open{display:flex}.order-modal{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:26px;box-shadow:0 30px 80px #0004}.order-modal-head{display:flex;justify-content:space-between;gap:20px;align-items:start}.order-modal h2{font:800 27px Manrope;margin:3px 0 7px}.order-modal-head p{margin:0;color:#777;font-size:13px;line-height:1.5}.order-close{border:0;background:#f3f1ef;border-radius:10px;width:38px;height:38px;font-size:24px;cursor:pointer}.order-form{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:20px}.order-field{display:flex;flex-direction:column;gap:6px}.order-field.full{grid-column:1/-1}.order-field label{font-size:12px;font-weight:800}.order-field input,.order-field textarea{width:100%;border:1px solid #ddd;border-radius:10px;padding:12px;font:inherit;outline:none}.order-field input:focus,.order-field textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(179,18,25,.08)}.order-field textarea{min-height:78px;resize:vertical}.order-note{grid-column:1/-1;font-size:10px;color:#777;line-height:1.5;margin:0}.order-empty{grid-column:1/-1;background:#fff;border:1px solid #ebe8e5;border-radius:17px;padding:28px;text-align:center}.order-empty h3{margin:0 0 7px;font:800 20px Manrope}.order-empty p{margin:0 0 16px;color:#777;font-size:13px}@media(max-width:560px){.order-request{align-items:flex-start;flex-direction:column}.order-request .btn{width:100%}.order-form{grid-template-columns:1fr}.order-field.full,.order-note{grid-column:auto}.order-modal{padding:20px}}
 </style>
+
+<style id="fix-20261003-2000">
+.order-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;padding:20px;overflow:auto}
+.order-modal-backdrop.open{display:grid!important;place-items:center}
+.order-modal{width:min(620px,100%);background:#fff;border-radius:18px;padding:24px;box-shadow:0 25px 70px #0004}
+.order-modal-head{display:flex;justify-content:space-between;gap:20px;align-items:start;margin-bottom:16px}.order-modal-head h2{margin:4px 0;font:800 24px Manrope}.order-modal-head button{border:0;background:none;font-size:28px;cursor:pointer}.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.order-grid label{font-size:11px;font-weight:700}.order-grid input,.order-grid textarea{width:100%;margin-top:6px;padding:11px;border:1px solid #ddd;border-radius:9px;font:inherit}.order-grid .wide{grid-column:1/-1}.order-note{font-size:11px;color:#777;line-height:1.5}.discount{z-index:5!important;display:inline-flex!important}
+@media(max-width:600px){.order-grid{grid-template-columns:1fr}.order-grid .wide{grid-column:auto}}
+</style>
 </head>
 <body>
   <div class="notice">Ofertas e disponibilidade podem variar. Confirme o pedido com a farmácia.</div>
@@ -250,6 +258,30 @@
   <script src="assets/js/promotions.js"></script>
   <script src="assets/js/catalogo-perfumaria-cosmeticos.js"></script>
   <script src="assets/js/store-fixed-20261003.js"></script>
+
+<script id="fix-runtime-20261003-2000">
+(function(){
+  function ensurePromoBadges(){
+    document.querySelectorAll('.product').forEach(function(card){
+      var meta=(card.querySelector('.product-meta')?.textContent||'').toLowerCase();
+      var desc=(card.querySelector('p')?.textContent||'').toLowerCase();
+      if(/medicamento|perfumaria|cosm[eé]tico/.test(meta+' '+desc) && !card.querySelector('.discount')){
+        var badge=document.createElement('span'); badge.className='discount'; badge.textContent='-10%'; card.prepend(badge);
+      }
+    });
+  }
+  function openOrder(){var m=document.getElementById('orderModal');if(!m)return;m.classList.add('open');m.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(function(){document.getElementById('orderMedicine')?.focus()},30)}
+  function closeOrder(){var m=document.getElementById('orderModal');if(!m)return;m.classList.remove('open');m.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+  document.addEventListener('click',function(e){
+    if(e.target.closest('[data-open-order]')){e.preventDefault();openOrder()}
+    if(e.target.closest('[data-close-order]')){e.preventDefault();closeOrder()}
+    if(e.target.id==='orderModal')closeOrder();
+  },true);
+  var obs=new MutationObserver(ensurePromoBadges);
+  document.addEventListener('DOMContentLoaded',function(){ensurePromoBadges();var grid=document.getElementById('productGrid');if(grid)obs.observe(grid,{childList:true,subtree:true})});
+  setTimeout(ensurePromoBadges,1000);setTimeout(ensurePromoBadges,3000);
+})();
+</script>
 <script>
 // Botão de lupa: executa a mesma busca já usada pelo campo e leva ao catálogo.
 document.addEventListener('DOMContentLoaded', function () {
