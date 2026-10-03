@@ -257,31 +257,9 @@
   <script src="assets/js/data.js"></script>
   <script src="assets/js/promotions.js"></script>
   <script src="assets/js/catalogo-perfumaria-cosmeticos.js"></script>
-  <script src="assets/js/store-fixed-20261003.js"></script>
+  <script src="assets/js/store-release-20261003-2015.js"></script>
 
-<script id="fix-runtime-20261003-2000">
-(function(){
-  function ensurePromoBadges(){
-    document.querySelectorAll('.product').forEach(function(card){
-      var meta=(card.querySelector('.product-meta')?.textContent||'').toLowerCase();
-      var desc=(card.querySelector('p')?.textContent||'').toLowerCase();
-      if(/medicamento|perfumaria|cosm[eé]tico/.test(meta+' '+desc) && !card.querySelector('.discount')){
-        var badge=document.createElement('span'); badge.className='discount'; badge.textContent='-10%'; card.prepend(badge);
-      }
-    });
-  }
-  function openOrder(){var m=document.getElementById('orderModal');if(!m)return;m.classList.add('open');m.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(function(){document.getElementById('orderMedicine')?.focus()},30)}
-  function closeOrder(){var m=document.getElementById('orderModal');if(!m)return;m.classList.remove('open');m.setAttribute('aria-hidden','true');document.body.style.overflow=''}
-  document.addEventListener('click',function(e){
-    if(e.target.closest('[data-open-order]')){e.preventDefault();openOrder()}
-    if(e.target.closest('[data-close-order]')){e.preventDefault();closeOrder()}
-    if(e.target.id==='orderModal')closeOrder();
-  },true);
-  var obs=new MutationObserver(ensurePromoBadges);
-  document.addEventListener('DOMContentLoaded',function(){ensurePromoBadges();var grid=document.getElementById('productGrid');if(grid)obs.observe(grid,{childList:true,subtree:true})});
-  setTimeout(ensurePromoBadges,1000);setTimeout(ensurePromoBadges,3000);
-})();
-</script>
+
 <script>
 // Botão de lupa: executa a mesma busca já usada pelo campo e leva ao catálogo.
 document.addEventListener('DOMContentLoaded', function () {
