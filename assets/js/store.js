@@ -8,6 +8,38 @@
 let dados = carregarDados();
 let sacola = [];
 let promocoesCatalogo = [];
+// Produtos de Perfumaria que, por regra comercial da loja, NÃO recebem o desconto automático de 10%.
+// A comparação é feita pelo nome normalizado para funcionar mesmo com pequenas diferenças de cadastro.
+const EXCLUSOES_PROMO_10 = [
+  /FRALDA.*MASTERFRAL/, /FRALDA.*BIGFRAL.*(7|16)/, /CONFORTMASTER.*PANTS/,
+  /MASTERSOFT.*P\/?M.*8/, /CONFORTCARE.*GG.*7/, /CONFORTMASTER.*G.*30/,
+  /ENXAGUANTE.*COLGATE.*PLAX.*250/, /DESODORANTE.*NIVEA.*72H/, /DESODORANTE.*REXONA.*250/,
+  /HIDRAMAIS.*500/, /SABONETE.*POMPOM.*70/, /NISTATINA.*OXIDO.*ZINCO/, /BEPANTRIZ.*50/,
+  /BEBE LIMPINHO.*LENCO/, /PANDA.*LENCO/, /PERSONAL.*LENCO.*50/, /PIQUITUCHO.*LENCO.*(60|120)/,
+  /OLEO.*MURIEL.*150/, /NEOPANTOL/, /BABYMED.*(AZUL|ROSA)/, /FRALDA.*RN.*TURMA.*MONICA/,
+  /PAMPERS.*PANTS/, /BABYSEC.*SHORTINHO/, /PERSONAL.*HIPER/, /HUGGIES.*PANTS/,
+  /SABONETE.*MARAN/, /FRALDA.*ISABABY.*G/, /REPELENTE.*XO.*INSETO/, /REPELETE.*XO.*INSETO/
+];
+function normalizarNomeProduto(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim()}
+function excluidoPromo10(produto){const n=normalizarNomeProduto(produto?.nome||produto?.produto);return EXCLUSOES_PROMO_10.some(rx=>rx.test(n))}
+
+// Promoção de quantidade cadastrada no campo promocao_manual.
+// Formato gravado pelo painel: LEVE 2 POR R$ 15,00
+function promoQuantidade(produto){
+  const txt=String(produto?.promocaoManual||produto?.promocao_manual||'').trim();
+  const m=txt.match(/LEVE\s*(\d+)\s*POR\s*R?\$?\s*([0-9.,]+)/i);
+  if(!m)return null;
+  const qtd=Math.max(2,Number(m[1])||0);
+  const valor=Number(m[2].replace(/\./g,'').replace(',','.'));
+  return qtd>1&&valor>0?{qtd,valor,texto:`Leve ${qtd} por ${moeda(valor)}`}:null;
+}
+function totalItemComPromo(item, quantidade){
+  const q=Math.max(1,Number(quantidade)||1), unit=Number(item.precoFinal||item.preco||0), pq=promoQuantidade(item);
+  if(!pq)return unit*q;
+  const grupos=Math.floor(q/pq.qtd), resto=q%pq.qtd;
+  return grupos*pq.valor + resto*unit;
+}
+
 
 // Paginação do catálogo
 const PRODUTOS_POR_PAGINA = 24;
@@ -210,7 +242,7 @@ function obterOfertaProduto(produto) {
   // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm
   // no mínimo 10% OFF. Independe de foto, pois é calculada pelos dados do produto.
   const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo);
+  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
   if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
     const precoMinimo10 = precoCheio * 0.90;
     if (precoMinimo10 < precoFinal - 0.009) {
@@ -230,7 +262,7 @@ function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
   // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
   const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao;
+  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
   const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
 
   return `
@@ -244,6 +276,7 @@ function cardProduto(produto) {
       <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
       <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
       <p>${produto.descricao}</p>
+      ${promoQuantidade(produto) ? `<div class="quantity-promo">${promoQuantidade(produto).texto}</div>` : ""}
       <div class="product-bottom">
         <div class="price-box">
           ${oferta.desconto ? `<del>${moeda(oferta.precoCheio)}</del>` : ""}
@@ -340,7 +373,9 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   const inicio = (paginaAtual - 1) * PRODUTOS_POR_PAGINA;
   const pagina = lista.slice(inicio, inicio + PRODUTOS_POR_PAGINA);
 
-  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : "<p>Nenhum produto encontrado.</p>";
+  const mostrarPiercing = paginaAtual===1 && (filtroAtual==="Todos" || filtroAtual==="Perfumaria") && (!termoAtual || /brinco|piercing/i.test(termoAtual));
+  const cardPiercing = mostrarPiercing ? `<article class="product piercing-card"><div class="product-visual piercing-visual"><img src="assets/images/brincos-piercings.jpg" alt="Brincos e piercings disponíveis" loading="lazy"></div><div class="product-meta">ACESSÓRIOS</div><h3>Brincos e Piercings</h3><div class="brand-name">Modelos disponíveis na loja</div><p>Consulte os modelos disponíveis. Não trabalhamos com quantidade fixa e <strong>não realizamos serviço de perfuração</strong>.</p><div class="product-bottom"><div class="price-box"><strong>Consulte modelos</strong></div><a class="add piercing-contact" href="${linkWhatsapp('Olá! Gostaria de consultar os modelos de brincos e piercings disponíveis.')}" target="_blank" rel="noopener" aria-label="Consultar brincos e piercings">↗</a></div></article>` : '';
+  el.produtos.innerHTML = (cardPiercing + (pagina.length ? pagina.map(cardProduto).join("") : (cardPiercing ? '' : "<p>Nenhum produto encontrado.</p>")));
   renderPaginacao(lista.length);
 
   el.produtos.querySelectorAll("[data-add]").forEach(btn => {
@@ -414,12 +449,12 @@ function atualizarSacola() {
             </div>
           </div>
         </div>
-        <div class="bag-item-price"><strong>${moeda(Number(p.precoFinal || 0) * quantidade)}</strong><button data-remove="${i}">remover</button></div>
+        <div class="bag-item-price"><strong>${moeda(totalItemComPromo(p, quantidade))}</strong><button data-remove="${i}">remover</button></div>
       </div>`;
     }).join("")
     : "<p>Sua sacola está vazia.</p>";
 
-  el.total.textContent = moeda(sacola.reduce((t,p)=>t + Number(p.precoFinal || 0) * Number(p.quantidade || p.qtd || 1),0));
+  el.total.textContent = moeda(sacola.reduce((t,p)=>t + totalItemComPromo(p, Number(p.quantidade || p.qtd || 1)),0));
 
   el.itens.querySelectorAll("[data-remove]").forEach(btn => {
     btn.addEventListener("click",()=>remover(Number(btn.dataset.remove)));
@@ -491,6 +526,15 @@ function finalizar() {
     const precoCheio = Number(p.precoCheio ?? p.preco ?? 0);
     const precoFinal = Number(p.precoFinal ?? p.preco ?? 0);
     const temDesconto = precoFinal < precoCheio - 0.009;
+    const pq = promoQuantidade(p);
+    const subtotal = totalItemComPromo(p, quantidade);
+
+    if (pq && quantidade >= pq.qtd) {
+      return `• ${p.nome}
+Quantidade: ${quantidade}
+Promoção especial: ${pq.texto}
+Subtotal promocional: ${moeda(subtotal)}`;
+    }
 
     if (temDesconto) {
       const percentual = precoCheio > 0 ? Math.round((1 - precoFinal / precoCheio) * 100) : 0;
@@ -498,13 +542,13 @@ function finalizar() {
 Quantidade: ${quantidade}
 Preço cheio unitário: ${moeda(precoCheio)}
 Preço com desconto unitário${percentual ? ` (${percentual}% OFF)` : ""}: ${moeda(precoFinal)}
-Subtotal: ${moeda(precoFinal * quantidade)}`;
+Subtotal: ${moeda(subtotal)}`;
     }
 
     return `• ${p.nome}
 Quantidade: ${quantidade}
 Preço unitário: ${moeda(precoFinal)}
-Subtotal: ${moeda(precoFinal * quantidade)}`;
+Subtotal: ${moeda(subtotal)}`;
   }).join(`\n\n`);
 
   const mensagem = `Olá! Gostaria de consultar este pedido:

@@ -1,0 +1,15 @@
+ATUALIZAÇÃO – PROMOÇÕES ESPECIAIS
+
+1. Promoção Leve X por R$ Y
+No painel > Produtos Pharmagno > Editar / Foto, informe Quantidade e Preço do conjunto.
+Exemplo: Quantidade 2, Preço 15,00. A vitrine mostra “Leve 2 por R$ 15,00” e a sacola calcula os grupos automaticamente.
+
+2. Exceções da promoção automática de 10%
+A lista enviada pela farmácia foi incorporada à vitrine. Esses itens NÃO recebem o 10% automático, mas podem receber promoção manual.
+No painel há o botão “Verificar lista de exceções dos 10%”, que mostra os itens encontrados e avisa se algum estiver fora da categoria Perfumaria.
+
+3. Sabonete Maran
+Está fora dos 10% automáticos. Para a oferta pedida, cadastre no próprio produto: Quantidade 5 / Preço 5,99.
+
+4. Brincos e Piercings
+A vitrine exibe um card sem quantidade de estoque, com consulta via WhatsApp e o aviso de que a loja não realiza perfuração.
