@@ -1,33 +1,21 @@
 let ops=carregarDados();const q=s=>document.querySelector(s);
-async function opsLoadRemote(){
-  try{
-    const rows=await api('/rest/v1/configuracoes_loja?chave=eq.operacao&select=valor&limit=1');
-    if(rows?.[0]?.valor){
-      const remoto=typeof rows[0].valor==='string'?JSON.parse(rows[0].valor):rows[0].valor;
-      ops={...ops,...remoto,configuracoes:{...(ops.configuracoes||{}),...(remoto.configuracoes||{})}};
-      salvarDados(ops);
-    }
-  }catch(e){console.warn('Configuração remota ainda não disponível:',e)}
-  opsRender();
+async function opsLoadRemote(){try{const rows=await api('/rest/v1/configuracoes_loja?chave=eq.operacao&select=valor&limit=1');if(rows?.[0]?.valor){const remoto=typeof rows[0].valor==='string'?JSON.parse(rows[0].valor):rows[0].valor;ops={...ops,...remoto,configuracoes:{...(ops.configuracoes||{}),...(remoto.configuracoes||{})}};salvarDados(ops)}}catch(e){console.warn('Configuração remota indisponível:',e)}opsRender()}
+async function opsSave(){salvarDados(ops);opsRender();try{await api('/rest/v1/configuracoes_loja?on_conflict=chave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({chave:'operacao',valor:{entregas:ops.entregas||[],configuracoes:ops.configuracoes||{},kits:ops.kits||[],sorteios:ops.sorteios||[]}})});return true}catch(e){console.error(e);alert('Salvo neste navegador, mas não publicado. Execute SUPABASE_ENTREGAS_SETUP.sql no Supabase.');return false}}
+function abrirModal(id){q(id)?.classList.add('open')} function fecharModal(el){el.closest('.modal')?.classList.remove('open')}
+function opsRender(){if(!q('#opsKits'))return;
+ q('#opsKits').innerHTML=(ops.kits||[]).map(k=>`<div class="campaign"><div><b>${k.nome}</b><small>${k.descricao||''}</small></div><div>${Number(k.preco||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><div><button class="table-action" data-edit-kit="${k.id}">Editar</button> <button class="table-action" data-del-kit="${k.id}">Excluir</button></div></div>`).join('')||'<p>Nenhum kit.</p>';
+ q('#opsGives').innerHTML=(ops.sorteios||[]).map(g=>`<div class="campaign"><div><b>${g.titulo}</b><small>${g.premio||''} • ${g.inicio||'sem início'} a ${g.fim||'sem fim'} • ${g.categoria||'Geral'}</small></div><div><button class="table-action" data-edit-give="${g.id}">Editar</button> <button class="table-action" data-del-give="${g.id}">Excluir</button></div></div>`).join('')||'<p>Nenhum sorteio.</p>';
+ q('#opsDelivery').innerHTML=(ops.entregas||[]).map(e=>`<div class="integration"><div class="integration-head"><h3>${e.nome}</h3><label class="switch-line"><input type="checkbox" data-od="${e.id}" ${e.ativo?'checked':''}> Ativo</label></div><p>${e.descricao||''}</p>${e.tipo==='retirada'?'':`<label>Link de entrega / parceiro<input type="url" data-od-url="${e.id}" value="${e.url||''}" placeholder="https://..."></label>`}<button class="primary" style="margin-top:10px" data-od-save="${e.id}">Salvar</button></div>`).join('');
+ q('#opsWhats').value=ops.configuracoes?.whatsapp||'';
+ document.querySelectorAll('[data-del-kit]').forEach(b=>b.onclick=async()=>{if(confirm('Excluir este kit?')){ops.kits=ops.kits.filter(x=>String(x.id)!==String(b.dataset.delKit));await opsSave()}});
+ document.querySelectorAll('[data-del-give]').forEach(b=>b.onclick=async()=>{if(confirm('Excluir este sorteio?')){ops.sorteios=ops.sorteios.filter(x=>String(x.id)!==String(b.dataset.delGive));await opsSave()}});
+ document.querySelectorAll('[data-edit-kit]').forEach(b=>b.onclick=()=>editarKit(b.dataset.editKit));
+ document.querySelectorAll('[data-edit-give]').forEach(b=>b.onclick=()=>editarSorteio(b.dataset.editGive));
+ document.querySelectorAll('[data-od-save]').forEach(b=>b.onclick=async()=>{const e=ops.entregas.find(x=>String(x.id)===String(b.dataset.odSave));e.ativo=q(`[data-od="${e.id}"]`).checked;const u=q(`[data-od-url="${e.id}"]`);if(u)e.url=u.value.trim();if(await opsSave())alert('Entrega publicada no site ✓')});
 }
-async function opsSave(){
-  salvarDados(ops);opsRender();
-  try{
-    await api('/rest/v1/configuracoes_loja?on_conflict=chave',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({chave:'operacao',valor:{entregas:ops.entregas||[],configuracoes:ops.configuracoes||{},kits:ops.kits||[],sorteios:ops.sorteios||[]}})});
-    return true;
-  }catch(e){console.error(e);alert('A alteração ficou salva neste navegador, mas não foi publicada no site. Rode o arquivo SUPABASE_ENTREGAS_SETUP.sql no Supabase uma vez.');return false}
-}
-function opsRender(){
-  if(!q('#opsKits'))return;
-  q('#opsKits').innerHTML=(ops.kits||[]).map(k=>`<div class="campaign"><div><b>${k.nome}</b><small>${k.descricao||''}</small></div><div>${Number(k.preco||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><button class="table-action" data-ok="${k.id}">Excluir</button></div>`).join('')||'<p>Nenhum kit.</p>';
-  q('#opsGives').innerHTML=(ops.sorteios||[]).map(g=>`<div class="campaign"><div><b>${g.titulo}</b><small>${g.premio||''}</small></div><button class="table-action" data-og="${g.id}">Excluir</button></div>`).join('')||'<p>Nenhum sorteio.</p>';
-  q('#opsDelivery').innerHTML=(ops.entregas||[]).map(e=>`<div class="integration"><div class="integration-head"><h3>${e.nome}</h3><label class="switch-line"><input type="checkbox" data-od="${e.id}" ${e.ativo?'checked':''}> Ativo</label></div><p>${e.descricao||''}</p>${e.tipo==='retirada'?'':`<label>Link de entrega / parceiro<input type="url" data-od-url="${e.id}" value="${e.url||''}" placeholder="https://..."></label>`}<button class="primary" style="margin-top:10px" data-od-save="${e.id}">Salvar</button></div>`).join('');
-  q('#opsWhats').value=ops.configuracoes?.whatsapp||'';
-  document.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{ops.kits=ops.kits.filter(x=>x.id!==Number(b.dataset.ok));await opsSave()});
-  document.querySelectorAll('[data-og]').forEach(b=>b.onclick=async()=>{ops.sorteios=ops.sorteios.filter(x=>x.id!==Number(b.dataset.og));await opsSave()});
-  document.querySelectorAll('[data-od-save]').forEach(b=>b.onclick=async()=>{const e=ops.entregas.find(x=>x.id===Number(b.dataset.odSave));e.ativo=q(`[data-od="${e.id}"]`).checked;const u=q(`[data-od-url="${e.id}"]`);if(u)e.url=u.value.trim();if(await opsSave())alert('Entrega publicada no site ✓')});
-}
-q('#addKit').onclick=async()=>{const nome=prompt('Nome do kit:');if(!nome)return;const preco=Number(prompt('Preço do kit:')||0);const descricao=prompt('Descrição:')||'';ops.kits=ops.kits||[];ops.kits.push({id:Date.now(),nome,preco,descricao,ativo:true});await opsSave()};
-q('#addGive').onclick=async()=>{const titulo=prompt('Título do sorteio:');if(!titulo)return;const premio=prompt('Prêmio:')||'';ops.sorteios=ops.sorteios||[];ops.sorteios.push({id:Date.now(),titulo,premio,descricao:'',inicio:'',fim:'',regulamento:'',ativo:true});await opsSave()};
-q('#saveWhats').onclick=async()=>{ops.configuracoes.whatsapp=q('#opsWhats').value.replace(/\D/g,'');if(await opsSave())alert('WhatsApp publicado no site ✓')};
-opsRender();if(token)opsLoadRemote();
+function editarKit(id=''){const k=(ops.kits||[]).find(x=>String(x.id)===String(id))||{};q('#kitId').value=k.id||'';q('#kitNome').value=k.nome||'';q('#kitPreco').value=k.preco||'';q('#kitPrecoOriginal').value=k.precoOriginal||'';q('#kitDescricao').value=k.descricao||'';q('#kitDestaque').value=k.destaque||'';q('#kitAtivo').checked=k.ativo!==false;abrirModal('#kitModal')}
+function editarSorteio(id=''){const g=(ops.sorteios||[]).find(x=>String(x.id)===String(id))||{};q('#giveId').value=g.id||'';q('#giveTitulo').value=g.titulo||'';q('#givePremio').value=g.premio||'';q('#giveInicio').value=g.inicio||'';q('#giveFim').value=g.fim||'';q('#giveCategoria').value=g.categoria||'Geral';q('#giveCondicao').value=g.condicao||g.descricao||'';q('#giveRegulamento').value=g.regulamento||'';q('#giveAtivo').checked=g.ativo!==false;abrirModal('#giveModal')}
+q('#addKit').onclick=()=>editarKit();q('#addGive').onclick=()=>editarSorteio();
+q('#kitForm').onsubmit=async e=>{e.preventDefault();const id=q('#kitId').value||String(Date.now());const novo={id,nome:q('#kitNome').value.trim(),preco:Number(q('#kitPreco').value||0),precoOriginal:Number(q('#kitPrecoOriginal').value||0),descricao:q('#kitDescricao').value.trim(),destaque:q('#kitDestaque').value.trim(),icone:'✦',ativo:q('#kitAtivo').checked};ops.kits=ops.kits||[];const i=ops.kits.findIndex(x=>String(x.id)===String(id));i>=0?ops.kits[i]=novo:ops.kits.push(novo);if(await opsSave()){q('#kitModal').classList.remove('open');alert('Kit salvo ✓')}};
+q('#giveForm').onsubmit=async e=>{e.preventDefault();const id=q('#giveId').value||String(Date.now());const cond=q('#giveCondicao').value.trim();const novo={id,titulo:q('#giveTitulo').value.trim(),premio:q('#givePremio').value.trim(),inicio:q('#giveInicio').value,fim:q('#giveFim').value,categoria:q('#giveCategoria').value.trim()||'Geral',condicao:cond,descricao:cond,regulamento:q('#giveRegulamento').value.trim(),ativo:q('#giveAtivo').checked};ops.sorteios=ops.sorteios||[];const i=ops.sorteios.findIndex(x=>String(x.id)===String(id));i>=0?ops.sorteios[i]=novo:ops.sorteios.push(novo);if(await opsSave()){q('#giveModal').classList.remove('open');alert('Sorteio publicado ✓')}};
+document.querySelectorAll('.ops-close').forEach(b=>b.onclick=()=>fecharModal(b));q('#saveWhats').onclick=async()=>{ops.configuracoes=ops.configuracoes||{};ops.configuracoes.whatsapp=q('#opsWhats').value.replace(/\D/g,'');if(await opsSave())alert('WhatsApp publicado no site ✓')};opsRender();if(token)opsLoadRemote();

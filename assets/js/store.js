@@ -207,6 +207,18 @@ function obterOfertaProduto(produto) {
     origem = "Promoção cadastrada";
   }
 
+  // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm
+  // no mínimo 10% OFF. Independe de foto, pois é calculada pelos dados do produto.
+  const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo);
+  if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
+    const precoMinimo10 = precoCheio * 0.90;
+    if (precoMinimo10 < precoFinal - 0.009) {
+      precoFinal = precoMinimo10;
+      origem = "Oferta 10% da loja";
+    }
+  }
+
   const desconto = precoCheio > 0 && precoFinal < precoCheio - 0.009
     ? ((precoCheio - precoFinal) / precoCheio) * 100
     : 0;
@@ -216,11 +228,17 @@ function obterOfertaProduto(produto) {
 
 function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
+  // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
+  const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao;
+  const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
 
   return `
     <article class="product">
-      ${oferta.desconto ? `<span class="discount">-${Math.round(oferta.desconto)}%</span>` : ""}
-      <div class="product-visual">${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}</div>
+      <div class="product-visual">
+        ${percentualTarja > 0 ? `<span class="discount">-${percentualTarja}%</span>` : ""}
+        ${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
+      </div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
       <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
