@@ -228,7 +228,7 @@ function cardProduto(produto) {
 
   return `
     <article class="product">
-      ${oferta.desconto ? `<span class="discount">PROMO -${Math.round(oferta.desconto)}%</span>` : (produto.promocaoManual ? `<span class="discount">PROMO</span>` : "")}
+      ${(oferta.desconto || ['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos'].includes(produto.categoria)) ? `<span class="discount">PROMO -${Math.max(10, Math.round(oferta.desconto || 0))}%</span>` : (produto.promocaoManual ? `<span class="discount">PROMO</span>` : "")}
       <div class="product-visual">${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}</div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
@@ -621,9 +621,10 @@ function renderSorteios() {
       <span class="kicker light">SORTEIO / CAMPANHA</span>
       <h3>${s.titulo}</h3>
       <div class="period">${s.inicio || "Data a definir"} → ${s.fim || "Data a definir"}</div>
-      <p><b>Prêmio:</b> ${s.premio}</p>
-      <p>${s.descricao}</p>
-      <details><summary>Ver regulamento informado</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>
+      <div class="giveaway-prize"><small>PRÊMIO</small><strong>${s.premio || "A definir"}</strong></div>
+      <div class="giveaway-info"><b>Como participar</b><p>${s.descricao || "As instruções de participação serão divulgadas pela farmácia."}</p></div>
+      <details><summary>Regulamento completo</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>
+      <a class="btn white giveaway-cta" href="${linkWhatsapp(`Olá! Gostaria de saber como participar do sorteio ${s.titulo}.`)}" target="_blank" rel="noopener">Quero participar / saber mais</a>
     </article>`).join("") : "<p>Nenhum sorteio ativo no momento.</p>";
 }
 

@@ -82,3 +82,6 @@
 .cart-qty-input{width:42px;height:30px;padding:0;border:0;border-left:1px solid #eee8e4;border-right:1px solid #eee8e4;text-align:center;font-weight:700;background:#fff;-moz-appearance:textfield}
 .cart-qty-input::-webkit-inner-spin-button,.cart-qty-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 @media(max-width:520px){.cart-stock-box{align-items:flex-start;flex-direction:column}.bag-item{gap:10px}.bag-item-price{min-width:72px}}
+
+/* Sorteios: apresentação completa */
+.giveaway-card{background:#1d1d1d;color:#fff;border-radius:22px;padding:28px;position:relative;overflow:hidden}.giveaway-card h3{font:800 25px Manrope;margin:14px 0 8px}.giveaway-card .period{color:#ffb9bc;font-size:12px;font-weight:800}.giveaway-prize{margin:20px 0;padding:16px;border:1px solid #ffffff24;border-radius:14px;background:#ffffff08}.giveaway-prize small,.giveaway-prize strong{display:block}.giveaway-prize small{font-size:9px;letter-spacing:1.8px;color:#ffb9bc}.giveaway-prize strong{font-size:18px;margin-top:5px}.giveaway-info{margin:16px 0}.giveaway-info p{color:#ddd;min-height:0;line-height:1.6}.giveaway-card details{border-top:1px solid #ffffff1f;padding-top:14px}.giveaway-card summary{cursor:pointer;font-weight:800}.giveaway-card details p{color:#ddd}.giveaway-cta{margin-top:18px}
