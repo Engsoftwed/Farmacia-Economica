@@ -99,6 +99,9 @@
 .search-submit svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .searchbar input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(179,18,25,.08)}
 @media(max-width:560px){.searchbar{padding:10px 0}.searchbar input{padding:12px;font-size:16px}}
+
+/* Encomenda de medicamento */
+.order-request{margin:24px 0 0;padding:22px;border:1px dashed #d8c9c6;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px}.order-request h3{margin:0 0 5px;font:800 18px Manrope}.order-request p{margin:0;color:#777;font-size:13px}.order-request.hidden{display:none}.order-modal-backdrop{position:fixed;inset:0;background:#0008;z-index:90;display:none;align-items:center;justify-content:center;padding:20px}.order-modal-backdrop.open{display:flex}.order-modal{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:26px;box-shadow:0 30px 80px #0004}.order-modal-head{display:flex;justify-content:space-between;gap:20px;align-items:start}.order-modal h2{font:800 27px Manrope;margin:3px 0 7px}.order-modal-head p{margin:0;color:#777;font-size:13px;line-height:1.5}.order-close{border:0;background:#f3f1ef;border-radius:10px;width:38px;height:38px;font-size:24px;cursor:pointer}.order-form{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:20px}.order-field{display:flex;flex-direction:column;gap:6px}.order-field.full{grid-column:1/-1}.order-field label{font-size:12px;font-weight:800}.order-field input,.order-field textarea{width:100%;border:1px solid #ddd;border-radius:10px;padding:12px;font:inherit;outline:none}.order-field input:focus,.order-field textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(179,18,25,.08)}.order-field textarea{min-height:78px;resize:vertical}.order-note{grid-column:1/-1;font-size:10px;color:#777;line-height:1.5;margin:0}.order-empty{grid-column:1/-1;background:#fff;border:1px solid #ebe8e5;border-radius:17px;padding:28px;text-align:center}.order-empty h3{margin:0 0 7px;font:800 20px Manrope}.order-empty p{margin:0 0 16px;color:#777;font-size:13px}@media(max-width:560px){.order-request{align-items:flex-start;flex-direction:column}.order-request .btn{width:100%}.order-form{grid-template-columns:1fr}.order-field.full,.order-note{grid-column:auto}.order-modal{padding:20px}}
 </style>
 </head>
 <body>
@@ -168,6 +171,10 @@
         <div id="activePromo" class="promo-banner hidden"></div>
         <div id="catalogSubfilters" class="catalog-subfilters hidden"></div>
         <div class="product-grid" id="productGrid"></div>
+        <div class="order-request" id="orderRequest">
+          <div><h3>Não encontrou o medicamento?</h3><p>Solicite uma encomenda e a equipe confirma disponibilidade, preço, prazo e eventual necessidade de receita.</p></div>
+          <button class="btn primary" type="button" data-open-order>Solicitar encomenda</button>
+        </div>
       </div>
     </section>
 
@@ -219,6 +226,23 @@
       <small>O envio da sacola é uma solicitação. A farmácia confirma valores e disponibilidade.</small>
     </div>
   </aside>
+
+
+  <div class="order-modal-backdrop" id="orderModal" aria-hidden="true">
+    <div class="order-modal" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
+      <div class="order-modal-head"><div><span class="kicker">ENCOMENDA</span><h2 id="orderTitle">Solicitar medicamento</h2><p>Preencha os dados abaixo. A solicitação será enviada para o WhatsApp da farmácia.</p></div><button class="order-close" type="button" data-close-order aria-label="Fechar">×</button></div>
+      <form class="order-form" id="orderForm">
+        <div class="order-field full"><label for="orderMedicine">Medicamento *</label><input id="orderMedicine" required placeholder="Ex.: nome do medicamento"></div>
+        <div class="order-field"><label for="orderDose">Dosagem / apresentação</label><input id="orderDose" placeholder="Ex.: 500 mg, 20 comprimidos"></div>
+        <div class="order-field"><label for="orderQty">Quantidade *</label><input id="orderQty" type="number" min="1" value="1" required></div>
+        <div class="order-field"><label for="orderName">Seu nome *</label><input id="orderName" required autocomplete="name"></div>
+        <div class="order-field"><label for="orderPhone">Telefone *</label><input id="orderPhone" required inputmode="tel" autocomplete="tel" placeholder="(77) 99999-9999"></div>
+        <div class="order-field full"><label for="orderObs">Observação</label><textarea id="orderObs" placeholder="Laboratório, preferência ou outra informação útil"></textarea></div>
+        <p class="order-note">A encomenda é uma solicitação. A farmácia confirmará disponibilidade, valor, prazo e as exigências aplicáveis à dispensação do medicamento.</p>
+        <button class="btn primary full" type="submit">Enviar solicitação pelo WhatsApp</button>
+      </form>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/config.js"></script>

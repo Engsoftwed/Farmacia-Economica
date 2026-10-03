@@ -322,7 +322,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   const inicio = (paginaAtual - 1) * PRODUTOS_POR_PAGINA;
   const pagina = lista.slice(inicio, inicio + PRODUTOS_POR_PAGINA);
 
-  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : "<p>Nenhum produto encontrado.</p>";
+  el.produtos.innerHTML = pagina.length ? pagina.map(cardProduto).join("") : `<div class="order-empty"><h3>Nenhum produto encontrado.</h3><p>${termoAtual ? `Não encontramos “${String(termoAtual).replace(/[<>]/g, "")}” no estoque disponível.` : "Não há produtos disponíveis neste filtro."}</p><button class="btn primary" type="button" data-open-order>Solicitar encomenda</button></div>`;
   renderPaginacao(lista.length);
 
   el.produtos.querySelectorAll("[data-add]").forEach(btn => {
@@ -709,3 +709,48 @@ document.addEventListener("click", (event) => {
   }
 });
 
+
+
+// Encomenda de medicamento ----------------------------------------------------
+function abrirEncomenda() {
+  const modal = document.querySelector("#orderModal");
+  const medicamento = document.querySelector("#orderMedicine");
+  if (!modal) return;
+  if (medicamento && termoAtual && !medicamento.value) medicamento.value = termoAtual;
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  setTimeout(() => medicamento?.focus(), 50);
+}
+function fecharEncomenda() {
+  const modal = document.querySelector("#orderModal");
+  modal?.classList.remove("open");
+  modal?.setAttribute("aria-hidden", "true");
+}
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-open-order]")) abrirEncomenda();
+  if (event.target.closest("[data-close-order]") || event.target.id === "orderModal") fecharEncomenda();
+});
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") fecharEncomenda(); });
+document.querySelector("#orderForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const medicamento = document.querySelector("#orderMedicine")?.value.trim();
+  const dose = document.querySelector("#orderDose")?.value.trim();
+  const quantidade = document.querySelector("#orderQty")?.value || "1";
+  const nome = document.querySelector("#orderName")?.value.trim();
+  const telefone = document.querySelector("#orderPhone")?.value.trim();
+  const observacao = document.querySelector("#orderObs")?.value.trim();
+  if (!medicamento || !nome || !telefone) return alert("Preencha medicamento, nome e telefone.");
+  const linhas = [
+    "Olá! Gostaria de solicitar uma encomenda de medicamento.",
+    "",
+    `Medicamento: ${medicamento}`,
+    dose ? `Dosagem/apresentação: ${dose}` : null,
+    `Quantidade: ${quantidade}`,
+    `Cliente: ${nome}`,
+    `Telefone: ${telefone}`,
+    observacao ? `Observação: ${observacao}` : null,
+    "",
+    "Por favor, confirmem disponibilidade, preço, prazo e se há exigência de receita."
+  ].filter(Boolean);
+  window.open(linkWhatsapp(linhas.join("\n")), "_blank", "noopener");
+});
