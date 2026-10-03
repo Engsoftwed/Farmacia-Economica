@@ -192,7 +192,12 @@ function obterOfertaProduto(produto) {
     origem = base.promocao?.nome || "Promoção do site";
   }
 
-  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  // Regra comercial da Farmácia + Econômica: TODO medicamento recebe no mínimo 10% OFF.
+  // A regra é aplicada na vitrine mesmo quando o cadastro antigo veio sem desconto.
+  const ehMedicamento = produto.categoria === "Medicamentos Éticos e Similares Equivalentes";
+  const descontoMinimoMedicamento = ehMedicamento ? 10 : 0;
+  const descontoFixoCadastrado = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  const descontoFixo = Math.max(descontoMinimoMedicamento, descontoFixoCadastrado);
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
       (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
@@ -219,7 +224,7 @@ function cardProduto(produto) {
 
   return `
     <article class="product">
-      ${oferta.desconto ? `<span class="discount">-${Math.round(oferta.desconto)}%</span>` : ""}
+      ${oferta.desconto ? `<span class="discount">PROMO -${Math.round(oferta.desconto)}%</span>` : (produto.promocaoManual ? `<span class="discount">PROMO</span>` : "")}
       <div class="product-visual">${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}</div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
