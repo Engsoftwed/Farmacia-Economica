@@ -192,17 +192,16 @@ function obterOfertaProduto(produto) {
     origem = base.promocao?.nome || "Promoção do site";
   }
 
-  // Regra comercial da Farmácia + Econômica:
-  // Medicamentos, Perfumaria e Cosméticos recebem no mínimo 10% OFF na vitrine.
-  // Isso também corrige itens antigos que vieram do Pharmagno sem desconto configurado.
-  const categoriaComDescontoMinimo = [
+  // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm no mínimo 10% OFF.
+  // Fazemos isso somente na composição da oferta da vitrine; o painel/admin não é alterado.
+  const categoriasComDescontoMinimo = new Set([
     "Medicamentos Éticos e Similares Equivalentes",
     "Perfumaria",
     "Cosméticos"
-  ].includes(produto.categoria);
-  const descontoMinimoCategoria = categoriaComDescontoMinimo ? 10 : 0;
+  ]);
+  const descontoMinimo = categoriasComDescontoMinimo.has(produto.categoria) ? 10 : 0;
   const descontoFixoCadastrado = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
-  const descontoFixo = Math.max(descontoMinimoCategoria, descontoFixoCadastrado);
+  const descontoFixo = Math.max(descontoMinimo, descontoFixoCadastrado);
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
       (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
