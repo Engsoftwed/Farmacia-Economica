@@ -173,7 +173,7 @@
         <div class="product-grid" id="productGrid"></div>
         <div class="order-request" id="orderRequest">
           <div><h3>Não encontrou o medicamento?</h3><p>Solicite uma encomenda e a equipe confirma disponibilidade, preço, prazo e eventual necessidade de receita.</p></div>
-          <button class="btn primary" type="button" data-open-order>Solicitar encomenda</button>
+          <button class="btn primary" type="button" data-open-order onclick="var m=document.getElementById('orderModal');if(m){m.classList.add('open');m.setAttribute('aria-hidden','false');setTimeout(function(){document.getElementById('orderMedicine')?.focus()},50)}">Solicitar encomenda</button>
         </div>
       </div>
     </section>
@@ -249,7 +249,7 @@
   <script src="assets/js/data.js"></script>
   <script src="assets/js/promotions.js"></script>
   <script src="assets/js/catalogo-perfumaria-cosmeticos.js"></script>
-  <script src="assets/js/store.js?v=20261003-stable1"></script>
+  <script src="assets/js/store-fixed-20261003.js"></script>
 <script>
 // Botão de lupa: executa a mesma busca já usada pelo campo e leva ao catálogo.
 document.addEventListener('DOMContentLoaded', function () {
