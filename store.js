@@ -63,7 +63,15 @@ function categoriaLoja(p) {
   const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
   if (especial) return especial.tipo;
 
-  // 3) Depois das exceções acima, respeita uma classe farmacêutica válida do Pharmagno.
+  // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
+  // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
+  // Ex.: ABS.ENLACE / absorventes nunca devem aparecer em Medicamentos.
+  const higienePeloNome =
+    /\b(ABSORVENTE|PROTETOR DIARIO|ALGODAO|COTONETE|HASTE FLEXIVEL|PAPEL HIGIENICO|FRALDA GERIATRICA|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE)\b/.test(nome) ||
+    /^(ABS[. _-]|ABSORB)/.test(nome);
+  if (higienePeloNome) return 'Higiene';
+
+  // 4) Só depois das exceções por produto respeitamos a classe farmacêutica do Pharmagno.
   const classeSub = `${classe} ${subclasse}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   if (/MEDICAMENT|ETIC|GENERICO|SIMILAR|FARMACO/.test(classeSub)) {
     return 'Medicamentos Éticos e Similares Equivalentes';
@@ -304,7 +312,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   const listaCategoria = dados.produtos
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
-    .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
+    .filter(p => !termoAtual || normalizarBusca(`${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''} ${p.ean||''} ${p.codigo||''} ${p.cod_barras||''}`).includes(normalizarBusca(termoAtual)));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria
     .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
@@ -555,8 +563,8 @@ function atualizarSugestoesBusca() {
   });
 }
 
-document.querySelector("#searchToggle").addEventListener("click",()=>{el.searchbar.classList.toggle("open");el.busca.focus()});
-document.querySelector("#searchClose").addEventListener("click",()=>{el.searchbar.classList.remove("open");document.querySelector("#searchSuggestions")?.classList.remove("open")});
+document.querySelector("#searchToggle")?.addEventListener("click",()=>{el.busca.focus()});
+document.querySelector("#searchClose")?.addEventListener("click",()=>{document.querySelector("#searchSuggestions")?.classList.remove("open")});
 el.busca.addEventListener("input",()=>{atualizarSugestoesBusca();renderProdutos("Todos",el.busca.value)});
 document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>renderProdutos(b.dataset.filter)));
 
