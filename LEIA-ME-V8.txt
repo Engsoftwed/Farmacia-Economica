@@ -1,0 +1,6 @@
+VERSÃO v8 — 04/10/2026
+
+Ao abrir /admin/, o topo deve mostrar: PAINEL v8 • 04/10/2026.
+Se esse selo não aparecer, o servidor não publicou estes arquivos.
+
+Correções: produto específico; Leve X por valor; kits com seleção e unidades; datas BR; medicamentos/genéricos sem desconto herdado de classe/subclasse; reclassificação de medicamentos/glicemia.

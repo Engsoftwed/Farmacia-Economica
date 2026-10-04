@@ -225,12 +225,15 @@ function obterOfertaProduto(produto) {
     origem = base.promocao?.nome || "Promoção do site";
   }
 
-  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  // Medicamentos/genéricos nunca recebem desconto herdado de classe/subclasse nem
+  // desconto fixo antigo. Só entram em promoção quando o responsável selecionar
+  // explicitamente aquele produto no painel.
+  const descontoFixo = (produto.excecaoPromocao || ehMedicamento) ? 0 : Number(produto.descontoFixo || 0);
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
-      (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
-      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse) ||
-      (r.tipo === "produto" && String(r.produto_id||'') === String(produto.id||''))
+      (r.tipo === "produto" && String(r.produto_id||'') === String(produto.id||'')) ||
+      (!ehMedicamento && r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
+      (!ehMedicamento && r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
     )
   );
   const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
