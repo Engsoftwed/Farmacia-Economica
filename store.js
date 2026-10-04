@@ -87,7 +87,7 @@ function categoriaLoja(p) {
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
-    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
+    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA|GLICEM|GLICOSE|GLICOSIMETRO|GLUCOMETRO|LANCETA|TIRA.*GLIC)\b/.test(nome);
   if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
@@ -228,7 +228,8 @@ function obterOfertaProduto(produto) {
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
       (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
-      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
+      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse) ||
+      (r.tipo === "produto" && String(r.produto_id||'') === String(produto.id||''))
     )
   );
   const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
@@ -239,10 +240,10 @@ function obterOfertaProduto(produto) {
     origem = "Promoção cadastrada";
   }
 
-  // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm
-  // no mínimo 10% OFF. Independe de foto, pois é calculada pelos dados do produto.
+  // Regra comercial da loja: o desconto automático de 10% vale somente para
+  // Perfumaria e Cosméticos. Medicamentos e genéricos NÃO recebem 10% automático.
   const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
+  const minimoDez = /PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
   if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
     const precoMinimo10 = precoCheio * 0.90;
     if (precoMinimo10 < precoFinal - 0.009) {
@@ -262,7 +263,7 @@ function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
   // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
   const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
+  const categoriaComPromoMinima = /PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
   const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
 
   return `
@@ -647,6 +648,7 @@ function renderKits() {
         <span class="kicker">${k.destaque || "KIT ESPECIAL"}</span>
         <h3>${k.nome}</h3>
         <p>${k.descricao}</p>
+        ${k.produtos ? `<div class="quantity-promo"><b>Itens do kit:</b> ${k.produtos}</div>` : ""}
         <div class="kit-price">
           ${k.precoOriginal ? `<del>${moeda(k.precoOriginal)}</del>` : ""}
           <strong>${moeda(k.preco)}</strong>
@@ -657,8 +659,8 @@ function renderKits() {
 
   area.querySelectorAll("[data-kit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
-      const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
+      const kit = kits.find(k => String(k.id) === String(btn.dataset.kit));
+      const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}.${kit.produtos ? ` Itens: ${kit.produtos}.` : ""} Podem confirmar disponibilidade e condições?`;
       window.open(linkWhatsapp(msg), "_blank", "noopener");
     });
   });
