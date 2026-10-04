@@ -9,3 +9,7 @@
 
 
 .quantity-deal-admin{border:1px solid #ead8d8;background:#fffafa;border-radius:10px;padding:12px;margin-bottom:14px}.quantity-deal-admin>b,.quantity-deal-admin>small{display:block}.quantity-deal-admin>small{color:#888;margin:4px 0 8px}.promo-check-box{margin:10px 0 16px;padding:10px;border:1px dashed #ddd;border-radius:10px}
+
+/* Seleção funcional de produtos dos kits */
+.kit-product-list{max-height:230px;overflow:auto;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:8px;background:#fff}.kit-product-option{display:flex!important;align-items:center;gap:9px;padding:8px;border-bottom:1px solid #eee;font-size:13px}.kit-product-option:last-child{border-bottom:0}.kit-product-option input{width:auto!important;margin:0}.kit-product-option span{display:block}.kit-product-option small{display:block;color:#777}.kit-empty{padding:12px;color:#777}.promo-hint{padding:10px 12px;border-radius:8px;background:#f6f6f6;margin-top:4px}
+.kit-product-list{max-height:240px;overflow:auto;border:1px solid #ddd;border-radius:10px;padding:8px;margin-top:8px}.kit-product-option{display:flex!important;gap:9px;align-items:flex-start;padding:8px;margin:0!important;border-bottom:1px solid #eee}.kit-product-option input{width:auto!important;margin:3px 0 0!important}.kit-product-option span{display:grid}.kit-product-option small{letter-spacing:0!important}.toolbar{display:flex;gap:10px;flex-wrap:wrap}

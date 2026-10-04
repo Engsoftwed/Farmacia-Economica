@@ -107,9 +107,3 @@ function verificarExclusoesPromo10(){
  box.innerHTML=`<b>${encontrados.length} produto(s) da lista localizados.</b>${foraPerf.length?`<br><span style="color:#b31219">Atenção: ${foraPerf.length} estão fora de Perfumaria no cadastro: ${foraPerf.slice(0,12).map(p=>esc(p.produto)).join('; ')}${foraPerf.length>12?'…':''}</span>`:'<br>Os itens encontrados estão classificados de forma compatível.'}<br>Esses produtos ficam fora do desconto automático de 10%, mas continuam podendo receber promoção manual.`;
 }
 if($('#checkPromoExceptionsBtn'))$('#checkPromoExceptionsBtn').onclick=verificarExclusoesPromo10;
-
-// Busca rápida no seletor de produto da promoção (v7)
-(function(){const inp=document.querySelector('#ruleProductSearch'),sel=document.querySelector('#ruleProduct');if(!inp||!sel)return;function fill(){const t=(inp.value||'').toLowerCase();const lista=(products||[]).filter(p=>!t||`${p.produto||''} ${p.codigo||''}`.toLowerCase().includes(t)).slice(0,300);sel.innerHTML='<option value="">Selecione um produto</option>'+lista.map(p=>`<option value="${p.id}">${esc(p.produto)} • ${esc(p.codigo||'')}</option>`).join('')}inp.addEventListener('input',fill);document.querySelector('#newRuleBtn')?.addEventListener('click',()=>{inp.value='';setTimeout(fill,0)});})();
-
-// Busca rápida para promoção por produto específico.
-(()=>{const busca=document.querySelector('#ruleProductSearch'),sel=document.querySelector('#ruleProduct');if(!busca||!sel)return;busca.addEventListener('input',()=>{const termo=busca.value.toLowerCase();const atual=sel.value;const lista=(products||[]).filter(p=>!termo||`${p.produto||''} ${p.codigo||''}`.toLowerCase().includes(termo)).slice(0,400);sel.innerHTML='<option value="">Selecione um produto</option>'+lista.map(p=>`<option value="${p.id}" ${String(p.id)===String(atual)?'selected':''}>${esc(p.produto)} • ${esc(p.codigo||'')}</option>`).join('');});})();
