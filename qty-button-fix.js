@@ -1,26 +1,26 @@
-// Correção isolada do botão "+ Leve X por preço".
-// Abre o modal mesmo se outro script do painel falhar antes de registrar o clique.
+// Correção isolada: abre a mesma caixa/modal usada pelo painel.
 (function () {
-  function abrirLeveX() {
+  function abrirCaixaLeveX(evento) {
+    if (evento) { evento.preventDefault(); evento.stopPropagation(); }
     var modal = document.getElementById('qtyDealModal');
-    if (!modal) return;
+    if (!modal) return false;
     modal.classList.add('open');
-
-    // Se a função completa do painel estiver disponível, usa-a para preencher produtos/campos.
-    try {
-      if (typeof window.openQtyDeal === 'function') window.openQtyDeal();
-    } catch (erro) {
-      console.error('Falha ao preparar Leve X por preço:', erro);
-    }
+    modal.style.display = 'grid';
+    try { if (typeof openQtyDeal === 'function') openQtyDeal(); } catch (_) {}
+    return false;
   }
-
+  window.abrirCaixaLeveX = abrirCaixaLeveX;
   document.addEventListener('DOMContentLoaded', function () {
     var botao = document.getElementById('newQtyDealBtn');
-    if (!botao) return;
-    botao.onclick = function (evento) {
-      evento.preventDefault();
-      evento.stopPropagation();
-      abrirLeveX();
-    };
+    if (botao) botao.addEventListener('click', abrirCaixaLeveX, true);
+    var modal = document.getElementById('qtyDealModal');
+    if (modal) {
+      modal.querySelectorAll('.close-modal').forEach(function (b) {
+        b.addEventListener('click', function () {
+          modal.classList.remove('open');
+          modal.style.display = 'none';
+        }, true);
+      });
+    }
   });
 })();
