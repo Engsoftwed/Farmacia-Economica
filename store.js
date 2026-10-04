@@ -87,7 +87,7 @@ function categoriaLoja(p) {
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
-    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA|GLICEM|GLICOSE|GLICOSIMETRO|GLUCOMETRO|LANCETA|TIRA.*GLIC)\b/.test(nome);
+    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA|ACICLOVIR|ACICLOVIR|METFORMINA|INSULINA|GLIBENCLAMIDA|GLICLAZIDA|GLICEM|GLICOSE|GLICOSIMETRO|GLUCOMETRO|LANCETA|TIRA.*GLIC)\b/.test(nome);
   if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
@@ -213,13 +213,14 @@ function obterOfertaProduto(produto) {
   const precoVista = Number(produto.precoVista ?? precoCheio);
 
   // Começa pelo menor preço real informado pelo Pharmagno.
-  let precoFinal = precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio;
+  const ehMedicamento = String(produto.categoria||'').includes('Medicamentos');
+  let precoFinal = ehMedicamento ? precoCheio : (precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio);
   let origem = precoFinal < precoCheio - 0.009 ? "Pharmagno / à vista" : "Preço normal";
 
   // Promoções locais não são somadas entre si nem sobre o preço à vista.
   // Comparamos as opções e usamos somente o menor preço final.
   const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes);
-  if (Number(base.precoFinal) < precoFinal - 0.009) {
+  if (!ehMedicamento && Number(base.precoFinal) < precoFinal - 0.009) {
     precoFinal = Number(base.precoFinal);
     origem = base.promocao?.nome || "Promoção do site";
   }
@@ -277,7 +278,7 @@ function cardProduto(produto) {
       <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
       <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
       <p>${produto.descricao}</p>
-      ${promoQuantidade(produto) ? `<div class="quantity-promo">${promoQuantidade(produto).texto}</div>` : ""}
+      ${(()=>{const d=(dados.quantityDeals||[]).find(x=>x.ativo&&String(x.produtoId)===String(produto.id));return d?`<div class="quantity-promo"><b>${d.titulo||'Leve 2 por um Preço Mais Econômico'}</b><br>Leve ${d.qtd} por ${moeda(d.valor)}</div>`:(promoQuantidade(produto)?`<div class="quantity-promo">${promoQuantidade(produto).texto}</div>`:'')})()}
       <div class="product-bottom">
         <div class="price-box">
           ${oferta.desconto ? `<del>${moeda(oferta.precoCheio)}</del>` : ""}
@@ -363,6 +364,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
 
   const listaCategoria = dados.produtos
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .filter(p => !(dados.kits||[]).some(k=>k.ativo&&k.ocultarIndividuais&&(k.produtoIds||[]).map(String).includes(String(p.id))))
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
@@ -500,6 +502,7 @@ async function carregarConfiguracoesLoja(){
       if(remoto.configuracoes)dados.configuracoes={...(dados.configuracoes||{}),...remoto.configuracoes};
       if(Array.isArray(remoto.kits))dados.kits=remoto.kits;
       if(Array.isArray(remoto.sorteios))dados.sorteios=remoto.sorteios;
+      if(Array.isArray(remoto.quantityDeals))dados.quantityDeals=remoto.quantityDeals;
     }
   }catch(e){console.warn('Configurações da loja indisponíveis; usando contingência local.',e)}
 }
@@ -595,6 +598,7 @@ function atualizarSugestoesBusca() {
 
   dados.produtos
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .filter(p => !(dados.kits||[]).some(k=>k.ativo&&k.ocultarIndividuais&&(k.produtoIds||[]).map(String).includes(String(p.id))))
     .forEach(p => {
       const nome = String(p.nome || "").trim();
       const chave = normalizarBusca(nome);
@@ -649,6 +653,7 @@ function renderKits() {
         <h3>${k.nome}</h3>
         <p>${k.descricao}</p>
         ${k.produtos ? `<div class="quantity-promo"><b>Itens do kit:</b> ${k.produtos}</div>` : ""}
+        ${(()=>{const itens=(k.produtoIds||[]).map(id=>dados.produtos.find(p=>String(p.id)===String(id))).filter(Boolean);const soma=itens.reduce((a,p)=>a+Number(p.estoque||0),0);const u=Math.max(1,Number(k.unidadesPorKit||1));return itens.length?`<div class="stock-info">Disponível: <strong>${Math.floor(soma/u)}</strong> kit(s) de ${u} un.</div>`:''})()}
         <div class="kit-price">
           ${k.precoOriginal ? `<del>${moeda(k.precoOriginal)}</del>` : ""}
           <strong>${moeda(k.preco)}</strong>
