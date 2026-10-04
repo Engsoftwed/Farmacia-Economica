@@ -165,6 +165,14 @@ async function carregarCatalogoSupabase() {
     descricao:usaCatalogoBeleza ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
   };
   });
+  // Aplica "Leve X por preço" apenas ao produto explicitamente selecionado no painel.
+  const deals=(dados.quantityDeals||[]).filter(d=>d.ativo!==false);
+  for(const d of deals){
+    const prod=dados.produtos.find(p=>String(p.id)===String(d.produtoId));
+    if(prod && Number(d.qtd)>=2 && Number(d.valor)>0){
+      prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
+    }
+  }
   const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
   dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
   return true;
@@ -210,66 +218,43 @@ function placeholderProduto(produto) {
 }
 function obterOfertaProduto(produto) {
   const precoCheio = Number(produto.precoCheio ?? produto.preco ?? 0);
-  const precoVista = Number(produto.precoVista ?? precoCheio);
+  let precoFinal = precoCheio;
+  let origem = "Preço normal";
 
-  // Começa pelo menor preço real informado pelo Pharmagno.
-  let precoFinal = precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio;
-  let origem = precoFinal < precoCheio - 0.009 ? "Pharmagno / à vista" : "Preço normal";
-
-  // Promoções locais não são somadas entre si nem sobre o preço à vista.
-  // Comparamos as opções e usamos somente o menor preço final.
-  const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes);
-  if (Number(base.precoFinal) < precoFinal - 0.009) {
-    precoFinal = Number(base.precoFinal);
-    origem = base.promocao?.nome || "Promoção do site";
-  }
-
-  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
-  const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
-    r.ativo && (
-      (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
-      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
-    )
-  );
-  const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
-  const melhorConfigurado = Math.max(descontoFixo, descontoGrupo);
-  const precoConfigurado = melhorConfigurado ? precoCheio * (1 - melhorConfigurado / 100) : precoCheio;
-  if (precoConfigurado < precoFinal - 0.009) {
-    precoFinal = precoConfigurado;
-    origem = "Promoção cadastrada";
-  }
-
-  // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm
-  // no mínimo 10% OFF. Independe de foto, pois é calculada pelos dados do produto.
-  const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
-  if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
-    const precoMinimo10 = precoCheio * 0.90;
-    if (precoMinimo10 < precoFinal - 0.009) {
-      precoFinal = precoMinimo10;
-      origem = "Oferta 10% da loja";
+  // REGRA SEGURA: não existe desconto automático por categoria, genérico ou preço à vista.
+  // Só entra em promoção quando o painel cadastrou explicitamente um desconto.
+  if (!produto.excecaoPromocao) {
+    const descontoFixo = Math.max(0, Number(produto.descontoFixo || 0));
+    const regras = promocoesCatalogo.filter(r => {
+      if (!r.ativo) return false;
+      if (r.tipo === "produto") return String(r.produto_id) === String(produto.id);
+      if (r.tipo === "classe") return r.classe === (produto.classeOriginal || produto.categoria);
+      if (r.tipo === "subclasse") return r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse;
+      return false;
+    });
+    const descontoRegra = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
+    const descontoAplicado = Math.min(100, Math.max(descontoFixo, descontoRegra));
+    if (descontoAplicado > 0 && precoCheio > 0) {
+      precoFinal = precoCheio * (1 - descontoAplicado / 100);
+      origem = "Promoção cadastrada no painel";
     }
   }
 
   const desconto = precoCheio > 0 && precoFinal < precoCheio - 0.009
-    ? ((precoCheio - precoFinal) / precoCheio) * 100
-    : 0;
-
+    ? ((precoCheio - precoFinal) / precoCheio) * 100 : 0;
   return {precoCheio, precoFinal, desconto, origem};
 }
 
 function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
-  // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
-  const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
-  const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
+  // Tarja somente quando existe desconto realmente cadastrado no painel.
+  const percentualTarja = Math.round(oferta.desconto || 0);
 
   return `
     <article class="product">
       <div class="product-visual">
         ${percentualTarja > 0 ? `<span class="discount">-${percentualTarja}%</span>` : ""}
-        ${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
+        ${produto.imagemUrl && !/Medicamentos/i.test(produto.categoria) ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
       </div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
@@ -499,6 +484,7 @@ async function carregarConfiguracoesLoja(){
       if(remoto.configuracoes)dados.configuracoes={...(dados.configuracoes||{}),...remoto.configuracoes};
       if(Array.isArray(remoto.kits))dados.kits=remoto.kits;
       if(Array.isArray(remoto.sorteios))dados.sorteios=remoto.sorteios;
+      if(Array.isArray(remoto.quantityDeals))dados.quantityDeals=remoto.quantityDeals;
     }
   }catch(e){console.warn('Configurações da loja indisponíveis; usando contingência local.',e)}
 }
@@ -664,6 +650,12 @@ function renderKits() {
   });
 }
 
+function dataBR(v){
+  if(!v) return "Data a definir";
+  const m=String(v).slice(0,10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
+}
+
 function renderSorteios() {
   const area = document.querySelector("#giveawayGrid");
   if (!area) return;
@@ -673,7 +665,7 @@ function renderSorteios() {
     <article class="giveaway-card">
       <span class="kicker light">SORTEIO / CAMPANHA</span>
       <h3>${s.titulo}</h3>
-      <div class="period">${s.inicio || "Data a definir"} → ${s.fim || "Data a definir"}</div>
+      <div class="period">${dataBR(s.inicio)} → ${dataBR(s.fim)}</div>
       <p><b>Prêmio:</b> ${s.premio}</p>
       <p>${s.descricao}</p>
       <details><summary>Ver regulamento informado</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>

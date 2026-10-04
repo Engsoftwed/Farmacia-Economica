@@ -87,7 +87,7 @@ function categoriaLoja(p) {
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
-    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
+    /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA|ACICLOVIR|ACICLOVIR|METFORMINA|INSULINA|GLIBENCLAMIDA|GLICLAZIDA|GLICEM|GLICOSE|GLICOSIMETRO|GLUCOMETRO|LANCETA|TIRA.*GLIC)\b/.test(nome);
   if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
@@ -210,56 +210,78 @@ function placeholderProduto(produto) {
 }
 function obterOfertaProduto(produto) {
   const precoCheio = Number(produto.precoCheio ?? produto.preco ?? 0);
-  // REGRA 04/10: nenhum desconto é criado automaticamente pelo site.
-  // O preço só muda quando existe promoção cadastrada explicitamente no painel.
-  let precoFinal = precoCheio;
-  let origem = "Preço normal";
+  const precoVista = Number(produto.precoVista ?? precoCheio);
 
-  const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes || []);
-  if (Number(base.precoFinal) < precoFinal - 0.009) {
+  // Começa pelo menor preço real informado pelo Pharmagno.
+  const ehMedicamento = String(produto.categoria||'').includes('Medicamentos');
+  let precoFinal = ehMedicamento ? precoCheio : (precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio);
+  let origem = precoFinal < precoCheio - 0.009 ? "Pharmagno / à vista" : "Preço normal";
+
+  // Promoções locais não são somadas entre si nem sobre o preço à vista.
+  // Comparamos as opções e usamos somente o menor preço final.
+  const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes);
+  if (!ehMedicamento && Number(base.precoFinal) < precoFinal - 0.009) {
     precoFinal = Number(base.precoFinal);
-    origem = base.promocao?.nome || "Promoção cadastrada";
+    origem = base.promocao?.nome || "Promoção do site";
   }
 
-  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  // Medicamentos/genéricos nunca recebem desconto herdado de classe/subclasse nem
+  // desconto fixo antigo. Só entram em promoção quando o responsável selecionar
+  // explicitamente aquele produto no painel.
+  const descontoFixo = (produto.excecaoPromocao || ehMedicamento) ? 0 : Number(produto.descontoFixo || 0);
   const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
     r.ativo && (
-      (r.tipo === "produto" && String(r.produto_id) === String(produto.id)) ||
-      (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
-      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
+      (r.tipo === "produto" && String(r.produto_id||'') === String(produto.id||'')) ||
+      (!ehMedicamento && r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
+      (!ehMedicamento && r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
     )
   );
   const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
   const melhorConfigurado = Math.max(descontoFixo, descontoGrupo);
-  if (melhorConfigurado > 0 && precoCheio > 0) {
-    const precoConfigurado = precoCheio * (1 - melhorConfigurado / 100);
-    if (precoConfigurado < precoFinal - 0.009) {
-      precoFinal = precoConfigurado;
-      origem = "Promoção cadastrada";
+  const precoConfigurado = melhorConfigurado ? precoCheio * (1 - melhorConfigurado / 100) : precoCheio;
+  if (precoConfigurado < precoFinal - 0.009) {
+    precoFinal = precoConfigurado;
+    origem = "Promoção cadastrada";
+  }
+
+  // Regra comercial da loja: o desconto automático de 10% vale somente para
+  // Perfumaria e Cosméticos. Medicamentos e genéricos NÃO recebem 10% automático.
+  const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const minimoDez = /PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
+  if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
+    const precoMinimo10 = precoCheio * 0.90;
+    if (precoMinimo10 < precoFinal - 0.009) {
+      precoFinal = precoMinimo10;
+      origem = "Oferta 10% da loja";
     }
   }
+
   const desconto = precoCheio > 0 && precoFinal < precoCheio - 0.009
-    ? ((precoCheio - precoFinal) / precoCheio) * 100 : 0;
+    ? ((precoCheio - precoFinal) / precoCheio) * 100
+    : 0;
+
   return {precoCheio, precoFinal, desconto, origem};
 }
 
 function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
-  // Tarja somente quando há promoção realmente cadastrada.
-  const percentualTarja = Math.round(oferta.desconto || 0);
+  // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
+  const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const categoriaComPromoMinima = /PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
+  const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
 
   return `
     <article class="product">
       <div class="product-visual">
         ${percentualTarja > 0 ? `<span class="discount">-${percentualTarja}%</span>` : ""}
-        ${(produto.imagemUrl && !/MEDICAMENT/i.test(String(produto.categoria||''))) ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
+        ${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
       </div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
       <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
       <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
       <p>${produto.descricao}</p>
-      ${promoQuantidade(produto) ? `<div class="quantity-promo">${promoQuantidade(produto).texto}</div>` : ""}
+      ${(()=>{const d=(dados.quantityDeals||[]).find(x=>x.ativo&&String(x.produtoId)===String(produto.id));return d?`<div class="quantity-promo"><b>${d.titulo||'Leve 2 por um Preço Mais Econômico'}</b><br>Leve ${d.qtd} por ${moeda(d.valor)}</div>`:(promoQuantidade(produto)?`<div class="quantity-promo">${promoQuantidade(produto).texto}</div>`:'')})()}
       <div class="product-bottom">
         <div class="price-box">
           ${oferta.desconto ? `<del>${moeda(oferta.precoCheio)}</del>` : ""}
@@ -345,6 +367,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
 
   const listaCategoria = dados.produtos
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .filter(p => !(dados.kits||[]).some(k=>k.ativo&&k.ocultarIndividuais&&(k.produtoIds||[]).map(String).includes(String(p.id))))
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
@@ -482,13 +505,7 @@ async function carregarConfiguracoesLoja(){
       if(remoto.configuracoes)dados.configuracoes={...(dados.configuracoes||{}),...remoto.configuracoes};
       if(Array.isArray(remoto.kits))dados.kits=remoto.kits;
       if(Array.isArray(remoto.sorteios))dados.sorteios=remoto.sorteios;
-      if(Array.isArray(remoto.quantityDeals)){
-        dados.quantityDeals=remoto.quantityDeals;
-        remoto.quantityDeals.filter(d=>d.ativo).forEach(d=>{
-          const p=dados.produtos.find(p=>String(p.id)===String(d.produtoId));
-          if(p) p.promocaoManual=`LEVE ${Number(d.qtd||2)} POR R$ ${Number(d.valor||0).toFixed(2).replace('.',',')}`;
-        });
-      }
+      if(Array.isArray(remoto.quantityDeals))dados.quantityDeals=remoto.quantityDeals;
     }
   }catch(e){console.warn('Configurações da loja indisponíveis; usando contingência local.',e)}
 }
@@ -584,6 +601,7 @@ function atualizarSugestoesBusca() {
 
   dados.produtos
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
+    .filter(p => !(dados.kits||[]).some(k=>k.ativo&&k.ocultarIndividuais&&(k.produtoIds||[]).map(String).includes(String(p.id))))
     .forEach(p => {
       const nome = String(p.nome || "").trim();
       const chave = normalizarBusca(nome);
@@ -637,6 +655,8 @@ function renderKits() {
         <span class="kicker">${k.destaque || "KIT ESPECIAL"}</span>
         <h3>${k.nome}</h3>
         <p>${k.descricao}</p>
+        ${k.produtos ? `<div class="quantity-promo"><b>Itens do kit:</b> ${k.produtos}</div>` : ""}
+        ${(()=>{const itens=(k.produtoIds||[]).map(id=>dados.produtos.find(p=>String(p.id)===String(id))).filter(Boolean);const soma=itens.reduce((a,p)=>a+Number(p.estoque||0),0);const u=Math.max(1,Number(k.unidadesPorKit||1));return itens.length?`<div class="stock-info">Disponível: <strong>${Math.floor(soma/u)}</strong> kit(s) de ${u} un.</div>`:''})()}
         <div class="kit-price">
           ${k.precoOriginal ? `<del>${moeda(k.precoOriginal)}</del>` : ""}
           <strong>${moeda(k.preco)}</strong>
@@ -647,17 +667,11 @@ function renderKits() {
 
   area.querySelectorAll("[data-kit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
-      const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
+      const kit = kits.find(k => String(k.id) === String(btn.dataset.kit));
+      const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}.${kit.produtos ? ` Itens: ${kit.produtos}.` : ""} Podem confirmar disponibilidade e condições?`;
       window.open(linkWhatsapp(msg), "_blank", "noopener");
     });
   });
-}
-
-function formatarDataBR(valor) {
-  if (!valor) return "";
-  const partes=String(valor).slice(0,10).split("-");
-  return partes.length===3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : String(valor);
 }
 
 function renderSorteios() {
@@ -669,7 +683,7 @@ function renderSorteios() {
     <article class="giveaway-card">
       <span class="kicker light">SORTEIO / CAMPANHA</span>
       <h3>${s.titulo}</h3>
-      <div class="period">${formatarDataBR(s.inicio) || "Data a definir"} → ${formatarDataBR(s.fim) || "Data a definir"}</div>
+      <div class="period">${s.inicio || "Data a definir"} → ${s.fim || "Data a definir"}</div>
       <p><b>Prêmio:</b> ${s.premio}</p>
       <p>${s.descricao}</p>
       <details><summary>Ver regulamento informado</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>
