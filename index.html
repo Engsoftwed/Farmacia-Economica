@@ -230,7 +230,7 @@
   <script src="assets/js/data.js"></script>
   <script src="assets/js/promotions.js"></script>
   <script src="assets/js/catalogo-perfumaria-cosmeticos.js"></script>
-  <script src="assets/js/store.js?v=20261004-functional-final"></script>
+  <script src="assets/js/store.js?v=20261004-organizacao-urgente-v2"></script>
   <script>
   (()=>{const modal=document.getElementById('medicineOrderModal'),open=document.getElementById('openOrderMedicine'),close=document.getElementById('closeMedicineOrder'),form=document.getElementById('medicineOrderForm');if(!modal||!open||!form)return;const show=()=>{modal.style.display='flex';document.body.style.overflow='hidden'},hide=()=>{modal.style.display='none';document.body.style.overflow=''};open.addEventListener('click',show);close?.addEventListener('click',hide);modal.addEventListener('click',e=>{if(e.target===modal)hide()});form.addEventListener('submit',e=>{e.preventDefault();const num=String((window.dados&&dados.configuracoes&&dados.configuracoes.whatsapp)||'5577998514808').replace(/\D/g,'');const med=document.getElementById('orderMedicine').value.trim(),dose=document.getElementById('orderDose').value.trim(),nome=document.getElementById('orderName').value.trim(),obs=document.getElementById('orderObs').value.trim();const msg=`Olá! Gostaria de fazer uma encomenda de medicamento.\n\nMedicamento: ${med}\nApresentação/dosagem: ${dose||'Não informada'}\nCliente: ${nome}\nObservação: ${obs||'Nenhuma'}\n\nPodem confirmar disponibilidade, valor e prazo?`;window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank','noopener');});})();
   </script>

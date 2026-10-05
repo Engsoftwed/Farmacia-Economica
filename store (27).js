@@ -82,6 +82,20 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
+  // Regras prioritárias para impedir mistura entre Infantil, Higiene e Perfumaria.
+  // Fralda adulta/geriátrica nunca entra na linha infantil.
+  const fraldaAdulta = /\b(FRALDA|ROUPA INTIMA|PANTS?)\b.*\b(ADULT|GERIATR|INCONTIN|BIGFRAL|MASTERFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b|\b(BIGFRAL|MASTERFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b/.test(nome);
+  if (fraldaAdulta) return 'Higiene';
+
+  // Fraldas e cuidados claramente infantis têm prioridade sobre classes antigas do cadastro.
+  const fraldaInfantil = /\b(FRALDA|PANTS?|SHORTINHO)\b.*\b(RN|RECEM|BEBE|BABY|INFANT|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|TURMA DA MONICA|PERSONAL BABY)\b|\b(PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|PERSONAL BABY)\b/.test(nome);
+  if (fraldaInfantil) return 'Infantil';
+
+  // Itens inequivocamente de perfumaria não podem cair no fallback de Higiene.
+  if (/\b(PERFUME|PERFUM|COLONIA|DEO COLONIA|BODY SPLASH|DESODORANTE|ANTITRANSPIRANTE|EAU DE|FRAGRANCIA)\b/.test(nome)) return 'Perfumaria';
+  // Maquiagem e beleza inequívoca ficam em Cosméticos.
+  if (/\b(BATOM|GLOSS|MASCARA DE CILIOS|RIMEL|BASE FACIAL|CORRETIVO|BLUSH|SOMBRA|DELINEADOR|PO COMPACTO|ESMALTE|REMOVEDOR DE ESMALTE)\b/.test(nome)) return 'Cosméticos';
+
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
   const medicamentoPeloProduto =
@@ -121,6 +135,12 @@ function categoriaLoja(p) {
   if (/\b(ABSORVENTE|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE|ALGODAO|COTONETE|PAPEL HIGIENICO|PROTETOR DIARIO|HASTE FLEXIVEL)\b/.test(texto)) return 'Higiene';
   return 'Higiene';
 }
+function subclasseMedicamentoCatalogo(p) {
+  const origem = `${p.classe || ''} ${p.subclasse || ''}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  if (/\bGENERICO(S)?\b|\bGEN\b/.test(origem)) return 'Genéricos';
+  return 'Éticos e Similares';
+}
+
 async function carregarTodasPaginas(base, headers) {
   const todos = [];
   for (let ini = 0; ; ini += 1000) {
@@ -147,7 +167,9 @@ async function carregarCatalogoSupabase() {
     const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
     const classeCatalogo = categoriaLoja(p);
     const usaCatalogoBeleza = especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo);
-    const subclasseCatalogo = usaCatalogoBeleza ? especial.tipo : (p.subclasse||'');
+    const subclasseCatalogo = classeCatalogo === 'Medicamentos Éticos e Similares Equivalentes'
+      ? subclasseMedicamentoCatalogo(p)
+      : (usaCatalogoBeleza ? especial.tipo : (p.subclasse||''));
     return {
     id:p.id, codigo:p.codigo, nome:p.produto, marca:p.laboratorio||'',
     setor:subclasseCatalogo || p.classe || 'Higiene', subclasse:subclasseCatalogo,
@@ -342,14 +364,23 @@ function renderPaginacao(totalItens) {
 
 function renderSubfiltrosCatalogo(listaBase) {
   if (!el.subfiltros) return;
-  if (!['Perfumaria','Cosméticos'].includes(filtroAtual)) {
+  const beleza = ['Perfumaria','Cosméticos'].includes(filtroAtual);
+  const medicamentos = filtroAtual === 'Medicamentos Éticos e Similares Equivalentes';
+  if (!beleza && !medicamentos) {
     el.subfiltros.innerHTML = '';
     el.subfiltros.classList.add('hidden');
     return;
   }
-  const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  el.subfiltros.classList.remove('hidden');
-  el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
+
+  if (medicamentos) {
+    const opcoes = ['Todos', 'Éticos e Similares', 'Genéricos'];
+    el.subfiltros.classList.remove('hidden');
+    el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Tipo de medicamento:</b>${opcoes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
+  } else {
+    const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    el.subfiltros.classList.remove('hidden');
+    el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
+  }
   el.subfiltros.querySelectorAll('[data-detalhe-beleza]').forEach(b=>b.onclick=()=>{detalheBelezaAtual=b.dataset.detalheBeleza;renderProdutos(filtroAtual,termoAtual)});
 }
 
@@ -372,7 +403,8 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria
-    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
+    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual)
+    .filter(p => filtroAtual !== 'Medicamentos Éticos e Similares Equivalentes' || detalheBelezaAtual === 'Todos' || p.subclasse === detalheBelezaAtual);
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / PRODUTOS_POR_PAGINA));
   if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
@@ -610,7 +642,7 @@ function atualizarSugestoesBusca() {
       (chave.startsWith(termo) ? inicio : contem).push(nome);
     });
 
-  const sugestoes = [...inicio, ...contem].slice(0, 8);
+  const sugestoes = [...inicio, ...contem].slice(0, 50);
   if (!sugestoes.length) {
     box.innerHTML = "";
     box.classList.remove("open");

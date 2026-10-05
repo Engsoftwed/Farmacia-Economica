@@ -1,0 +1,23 @@
+CORREÇÕES URGENTES - 04/10/2026
+
+1. Higiene / Perfumaria
+- Perfumes, colônias, body splash, desodorantes e antitranspirantes têm prioridade para Perfumaria.
+- Maquiagem inequívoca tem prioridade para Cosméticos.
+- Itens de higiene permanecem em Higiene.
+
+2. Medicamentos
+- A vitrine de Medicamentos ganhou filtro por subclasse:
+  * Éticos e Similares
+  * Genéricos
+- A separação usa a classe/subclasse recebida do cadastro Pharmagno/Supabase.
+
+3. Fraldas
+- Fraldas adultas/geriátricas (incluindo linhas Bigfral, Masterfral, Confortmaster, Confortcare e Mastersoft) não entram mais em Infantil.
+- Fraldas claramente infantis (Pampers, Huggies, Babysec, Isababy, Piquitucho, Pompom etc.) entram em Infantil mesmo se o cadastro antigo vier com classe incorreta.
+
+4. Pesquisa
+- Sugestões aumentadas para até 50 resultados.
+- Caixa de resultados limitada em altura e com scroll vertical visível no desktop e celular.
+
+5. Preservado
+- Integração Pharmagno/Supabase, painel, promoções, Leve X por preço, WhatsApp, carrinho e demais recursos foram mantidos.
