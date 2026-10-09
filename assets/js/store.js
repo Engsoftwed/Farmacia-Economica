@@ -88,12 +88,16 @@ function categoriaLoja(p) {
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
     /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
-  if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
+  if (medicamentoPeloProduto || /\b(ACETATO DE DEXAMETASONA|ACEVITON|ACCU.CHEK|GLICEMIA|GLICOSIMETRO|GLUCOMETRO|TIRAS? REAGENTES?|LANCETAS?)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
   // Ex.: absorventes não devem virar medicamentos só porque a classe de origem veio errada.
   const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
   if (especial) return especial.tipo;
+
+  // Produtos infantis: priorizar o uso do produto antes da classe genérica.
+  if (/\b(FRALDA|LENCOS? UMEDECIDOS?|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|POMADA PARA ASSADURA)\b/.test(nome) &&
+      !/\b(GERIATRIC|ADULTO|SENIOR|INCONTINENCIA)\b/.test(nome)) return 'Infantil';
 
   // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
   // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
@@ -345,7 +349,14 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   termoAtual = termo;
   if (resetarPagina) paginaAtual = 1;
 
+  const idsExclusivos = new Set((dados.kits || [])
+    .filter(k => k.ativo && k.ocultarIndividuais)
+    .flatMap(k => (k.produtoIds || []).map(String)));
+  const nomesExclusivos = new Set((dados.kits || [])
+    .filter(k => k.ativo && k.ocultarIndividuais)
+    .flatMap(k => String(k.produtos || '').split(/\s*\+\s*/).map(n => n.trim().toLowerCase()).filter(Boolean)));
   const listaCategoria = dados.produtos
+    .filter(p => !idsExclusivos.has(String(p.id)) && !nomesExclusivos.has(String(p.nome || '').trim().toLowerCase()))
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
@@ -380,6 +391,10 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
 function adicionar(id) {
   const produto = dados.produtos.find(p => p.id === id);
   if (!produto) return;
+  if ((dados.kits || []).some(k => k.ativo && k.ocultarIndividuais && (
+    (k.produtoIds || []).some(id => String(id) === String(produto.id)) ||
+    String(k.produtos || '').split(/\s*\+\s*/).some(nome => nome.trim().toLowerCase() === String(produto.nome || '').trim().toLowerCase())
+  ))) return alert('Este produto é vendido exclusivamente em kit.');
 
   const estoque = Math.max(0, Number(produto.estoque || 0));
   if (estoque < 1) return alert("Produto sem estoque no momento.");
@@ -643,7 +658,8 @@ function renderKits() {
 
   area.querySelectorAll("[data-kit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
+      const kit = kits.find(k => String(k.id) === String(btn.dataset.kit));
+      if (!kit) return;
       const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
       window.open(linkWhatsapp(msg), "_blank", "noopener");
     });

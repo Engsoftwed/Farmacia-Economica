@@ -1,0 +1,9 @@
+ZIP PARA PUBLICAR NO NETLIFY
+
+Este ZIP contem apenas os arquivos necessarios ao site estatico e ao painel, sem copias antigas, PDFs, scripts SQL e sincronizador local.
+
+Publique o ZIP descompactado pelo Netlify Drop ou arraste a pasta extraida. O arquivo index.html deve estar na raiz.
+
+Google Analytics: G-R9R11TZZVY. Teste consentimento e relatorio Tempo real apos publicar.
+
+IMPORTANTE: O sincronizador Pharmagno instalado na farmacia nao deve ser substituido por este ZIP. Faca backup da versao atual antes de publicar.
