@@ -1,0 +1,2 @@
+Relatorio integrado: https://datastudio.google.com/embed/reporting/c1a290f0-797e-4b6d-9596-afac6a6fc153/page/NUyAG
+O acesso depende das permissoes do Looker Studio. Nao altere para publico sem avaliar a privacidade. Os indicadores superiores nao possuem API de leitura configurada.
