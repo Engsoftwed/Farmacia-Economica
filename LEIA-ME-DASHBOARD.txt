@@ -1,0 +1,15 @@
+PAINEL DE ESTATÍSTICAS - FARMÁCIA MAIS ECONÔMICA
+
+O GA4 já utiliza G-R9R11TZZVY para coletar eventos após consentimento.
+
+IMPORTANTE: o ID de medição NÃO concede acesso aos dados do GA4. Para mostrar relatórios reais dentro do painel:
+1. Acesse https://lookerstudio.google.com/ e crie um relatório.
+2. Conecte sua propriedade do Google Analytics 4 como fonte de dados.
+3. Adicione gráficos de usuários, visualizações, eventos e séries temporais.
+4. Em Arquivo > Incorporar relatório, habilite a incorporação e copie a URL https://lookerstudio.google.com/embed/reporting/...
+5. No painel da farmácia > Estatísticas, cole a URL e clique em Exibir relatório.
+6. Configure as permissões do relatório para evitar acesso público indesejado.
+
+Os cartões superiores mostram traços enquanto não existe API segura para carregar métricas. Não são dados fictícios. A URL de incorporação fica salva somente no navegador local.
+
+Esta versão não altera o Supabase, o sincronizador Pharmagno, nem os dados do catálogo. Teste em hospedagem de prévia antes de substituir a loja em produção.
