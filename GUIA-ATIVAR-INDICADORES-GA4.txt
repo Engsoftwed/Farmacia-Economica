@@ -1,0 +1,23 @@
+INDICADORES REAIS NO PAINEL - FARMÁCIA MAIS ECONÔMICA
+
+O ZIP contém a interface pronta e uma função Netlify segura. Os valores só aparecem após autorizar a API GA4.
+
+1. No Google Cloud, selecione/crie um projeto e ative Google Analytics Data API.
+2. Em IAM e administrador > Contas de serviço, crie uma conta de serviço e uma chave JSON. NÃO coloque esse arquivo no GitHub ou dentro do ZIP/site.
+3. No Google Analytics > Administrador > Gerenciamento de acesso à propriedade, adicione o e-mail da conta de serviço com função Leitor.
+4. No Netlify > Project configuration > Environment variables, configure:
+   GA4_PROPERTY_ID = 558321387 (CONFIRME em Analytics > Administrador > Detalhes da propriedade)
+   GA4_SERVICE_ACCOUNT_JSON = conteúdo INTEGRAL do JSON privado da conta de serviço.
+   Marque essas variáveis como secretas/restritas quando possível.
+5. Publique a atualização via GitHub conectado ao Netlify. Netlify precisa executar o build/deploy de Functions; Live Server local não executa funções Netlify.
+6. Acesse /admin/ > Estatísticas > Atualizar números. Verifique se há erro de autorização.
+7. Se houver erro, confirme o ID da propriedade, a ativação da API, a permissão Leitor e os logs da função no Netlify.
+
+IMPORTANTE:
+- O ID de medição G-R9R11TZZVY não substitui o ID numérico da propriedade.
+- 'Visitantes' usa a métrica activeUsers; 'Visualizações' usa screenPageViews.
+- Cliques WhatsApp reconhecidos: whatsapp_click, click_whatsapp, click_whats, whatsapp_contact.
+- Interações com produtos: select_item, view_item, add_to_cart.
+- Esses dois últimos cartões exigem que os eventos correspondentes estejam sendo enviados pelo site; valores zero não provam que a instrumentação esteja correta.
+- O painel não pode ler números de um iframe Looker Studio por segurança do navegador.
+- Nenhum segredo de autenticação está incluído neste ZIP.
