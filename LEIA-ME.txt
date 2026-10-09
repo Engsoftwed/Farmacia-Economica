@@ -1,0 +1,2 @@
+CORRECAO DA PAGINA INICIAL
+Substitua somente o index.html na RAIZ do repositorio GitHub usado pelo deploy (nao o admin/index.html). Preserve os demais arquivos. Confirme que a hospedagem esta publicando esse repositorio e diretorio. _redirects e netlify.toml sao apenas para Netlify. Antes de publicar faca backup.
