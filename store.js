@@ -82,32 +82,22 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  // Regras prioritárias para impedir mistura entre Infantil, Higiene e Perfumaria.
-  // Fralda adulta/geriátrica nunca entra na linha infantil.
-  const fraldaAdulta = /\b(FRALDA|ROUPA INTIMA|PANTS?)\b.*\b(ADULT|GERIATR|INCONTIN|BIGFRAL|MASTERFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b|\b(BIGFRAL|MASTERFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b/.test(nome);
-  if (fraldaAdulta) return 'Higiene';
-
-  // Fraldas e cuidados claramente infantis têm prioridade sobre classes antigas do cadastro.
-  const fraldaInfantil = /\b(FRALDA|PANTS?|SHORTINHO)\b.*\b(RN|RECEM|BEBE|BABY|INFANT|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|TURMA DA MONICA|PERSONAL BABY)\b|\b(PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|PERSONAL BABY)\b/.test(nome);
-  if (fraldaInfantil) return 'Infantil';
-
-  // Itens inequivocamente de perfumaria não podem cair no fallback de Higiene.
-  if (/\b(PERFUME|PERFUM|COLONIA|DEO COLONIA|BODY SPLASH|DESODORANTE|ANTITRANSPIRANTE|EAU DE|FRAGRANCIA)\b/.test(nome)) return 'Perfumaria';
-  // Maquiagem e beleza inequívoca ficam em Cosméticos.
-  if (/\b(BATOM|GLOSS|MASCARA DE CILIOS|RIMEL|BASE FACIAL|CORRETIVO|BLUSH|SOMBRA|DELINEADOR|PO COMPACTO|ESMALTE|REMOVEDOR DE ESMALTE)\b/.test(nome)) return 'Cosméticos';
-
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
     /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
-  if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
+  if (medicamentoPeloProduto || /\b(ACETATO DE DEXAMETASONA|ACEVITON|ACCU.CHEK|GLICEMIA|GLICOSIMETRO|GLUCOMETRO|TIRAS? REAGENTES?|LANCETAS?)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
   // Ex.: absorventes não devem virar medicamentos só porque a classe de origem veio errada.
   const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
   if (especial) return especial.tipo;
+
+  // Produtos infantis: priorizar o uso do produto antes da classe genérica.
+  if (/\b(FRALDA|LENCOS? UMEDECIDOS?|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|POMADA PARA ASSADURA)\b/.test(nome) &&
+      !/\b(GERIATRIC|ADULTO|SENIOR|INCONTINENCIA)\b/.test(nome)) return 'Infantil';
 
   // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
   // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
@@ -135,12 +125,6 @@ function categoriaLoja(p) {
   if (/\b(ABSORVENTE|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE|ALGODAO|COTONETE|PAPEL HIGIENICO|PROTETOR DIARIO|HASTE FLEXIVEL)\b/.test(texto)) return 'Higiene';
   return 'Higiene';
 }
-function subclasseMedicamentoCatalogo(p) {
-  const origem = `${p.classe || ''} ${p.subclasse || ''}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-  if (/\bGENERICO(S)?\b|\bGEN\b/.test(origem)) return 'Genéricos';
-  return 'Éticos e Similares';
-}
-
 async function carregarTodasPaginas(base, headers) {
   const todos = [];
   for (let ini = 0; ; ini += 1000) {
@@ -167,9 +151,7 @@ async function carregarCatalogoSupabase() {
     const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
     const classeCatalogo = categoriaLoja(p);
     const usaCatalogoBeleza = especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo);
-    const subclasseCatalogo = classeCatalogo === 'Medicamentos Éticos e Similares Equivalentes'
-      ? subclasseMedicamentoCatalogo(p)
-      : (usaCatalogoBeleza ? especial.tipo : (p.subclasse||''));
+    const subclasseCatalogo = usaCatalogoBeleza ? especial.tipo : (p.subclasse||'');
     return {
     id:p.id, codigo:p.codigo, nome:p.produto, marca:p.laboratorio||'',
     setor:subclasseCatalogo || p.classe || 'Higiene', subclasse:subclasseCatalogo,
@@ -344,23 +326,14 @@ function renderPaginacao(totalItens) {
 
 function renderSubfiltrosCatalogo(listaBase) {
   if (!el.subfiltros) return;
-  const beleza = ['Perfumaria','Cosméticos'].includes(filtroAtual);
-  const medicamentos = filtroAtual === 'Medicamentos Éticos e Similares Equivalentes';
-  if (!beleza && !medicamentos) {
+  if (!['Perfumaria','Cosméticos'].includes(filtroAtual)) {
     el.subfiltros.innerHTML = '';
     el.subfiltros.classList.add('hidden');
     return;
   }
-
-  if (medicamentos) {
-    const opcoes = ['Todos', 'Éticos e Similares', 'Genéricos'];
-    el.subfiltros.classList.remove('hidden');
-    el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Tipo de medicamento:</b>${opcoes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
-  } else {
-    const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-    el.subfiltros.classList.remove('hidden');
-    el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
-  }
+  const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  el.subfiltros.classList.remove('hidden');
+  el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
   el.subfiltros.querySelectorAll('[data-detalhe-beleza]').forEach(b=>b.onclick=()=>{detalheBelezaAtual=b.dataset.detalheBeleza;renderProdutos(filtroAtual,termoAtual)});
 }
 
@@ -376,14 +349,20 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   termoAtual = termo;
   if (resetarPagina) paginaAtual = 1;
 
+  const idsExclusivos = new Set((dados.kits || [])
+    .filter(k => k.ativo && k.ocultarIndividuais)
+    .flatMap(k => (k.produtoIds || []).map(String)));
+  const nomesExclusivos = new Set((dados.kits || [])
+    .filter(k => k.ativo && k.ocultarIndividuais)
+    .flatMap(k => String(k.produtos || '').split(/\s*\+\s*/).map(n => n.trim().toLowerCase()).filter(Boolean)));
   const listaCategoria = dados.produtos
+    .filter(p => !idsExclusivos.has(String(p.id)) && !nomesExclusivos.has(String(p.nome || '').trim().toLowerCase()))
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria
-    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual)
-    .filter(p => filtroAtual !== 'Medicamentos Éticos e Similares Equivalentes' || detalheBelezaAtual === 'Todos' || p.subclasse === detalheBelezaAtual);
+    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / PRODUTOS_POR_PAGINA));
   if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
@@ -412,6 +391,10 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
 function adicionar(id) {
   const produto = dados.produtos.find(p => p.id === id);
   if (!produto) return;
+  if ((dados.kits || []).some(k => k.ativo && k.ocultarIndividuais && (
+    (k.produtoIds || []).some(id => String(id) === String(produto.id)) ||
+    String(k.produtos || '').split(/\s*\+\s*/).some(nome => nome.trim().toLowerCase() === String(produto.nome || '').trim().toLowerCase())
+  ))) return alert('Este produto é vendido exclusivamente em kit.');
 
   const estoque = Math.max(0, Number(produto.estoque || 0));
   if (estoque < 1) return alert("Produto sem estoque no momento.");
@@ -620,7 +603,7 @@ function atualizarSugestoesBusca() {
       (chave.startsWith(termo) ? inicio : contem).push(nome);
     });
 
-  const sugestoes = [...inicio, ...contem].slice(0, 50);
+  const sugestoes = [...inicio, ...contem].slice(0, 8);
   if (!sugestoes.length) {
     box.innerHTML = "";
     box.classList.remove("open");
@@ -675,7 +658,8 @@ function renderKits() {
 
   area.querySelectorAll("[data-kit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
+      const kit = kits.find(k => String(k.id) === String(btn.dataset.kit));
+      if (!kit) return;
       const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
       window.open(linkWhatsapp(msg), "_blank", "noopener");
     });

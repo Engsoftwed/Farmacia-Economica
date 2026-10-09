@@ -1,0 +1,10 @@
+FARMÁCIA MAIS ECONÔMICA - ATUALIZAÇÃO 09/10/2026
+
+Inclui aba Estatísticas no painel, GA4 G-R9R11TZZVY, consentimento e arquivos da loja.
+
+IMPORTANTE: O NETLIFY MOSTROU PUBLICAÇÕES DE PRODUÇÃO PAUSADAS POR CRÉDITOS.
+Enviar este ZIP não irá atualizar o site enquanto o bloqueio persistir.
+Não exclua o projeto nem altere o DNS sem planejar a migração.
+
+Faça backup, publique primeiro em ambiente de teste e valide catálogo, kits, busca, painel e analytics.
+O painel mostra link para relatórios no Google Analytics, não números embutidos.
