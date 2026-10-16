@@ -191,7 +191,7 @@ async function carregarCatalogoSupabase() {
     }
   }
   const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Diversos'];
-  dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
+  dados.categorias = ordem.filter(nome=>nome==='Fraldas'||dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
   return true;
 }
 
