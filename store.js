@@ -92,14 +92,21 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  // Anticoncepcionais: produtos explicitamente identificados no cadastro.
-  // Não classificar qualquer hormônio como contraceptivo sem evidência.
-  if (/\b(ANTICONCEPC|CONTRACEPTIV|PILULA DO DIA SEGUINTE|LEVONORGESTREL|ETINILESTRADIOL|DESOGESTREL|GESTODENO|DROSPIRENONA|DIENOGESTE)\b/.test(nome) || /\bANTICONCEPC|CONTRACEPTIV/.test(texto)) return 'Anticoncepcionais';
-  // Saúde íntima e itens infantis devem ser identificados antes da classe legada.
-  if (/\b(PRESERVATIV\w*|CAMISINHA\w*|CONDOM\w*|LUBRIFICANTE\s+INTIM\w*|GEL\s+INTIM\w*|KY GEL|K-Y GEL)\b/.test(nome) || /^(PRES[. _-]|PRESERV)/.test(nome)) return 'Saúde Íntima';
-  if (/\b(CHUPETA|MAMADEIRA|BICO DE MAMADEIRA|MORDEDOR|PORTA CHUPETA)\b/.test(nome)) return 'Infantil';
-  // Fraldas têm categoria própria. O nome prevalece sobre classes antigas do sistema.
-  if (/\b(FRALDAS?|PAMPERS|BABYSEC|ISABABY|HUGGIES|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT|PLENITUD|TENA|LIFREE)\b/.test(nome)) return 'Fraldas';
+  // Classificação pelo cadastro REAL (nome, classe e subclasse). Não cria produtos.
+  // Aceita abreviações frequentes em cadastros de farmácia, sem usar apenas a marca
+  // quando ela pode identificar outros tipos de produtos.
+  const contraceptivo = /\b(?:ANTICONCEPC\w*|CONTRACEPTIV\w*|PILULA\s+DO\s+DIA\s+SEGUINTE|LEVONORGESTREL|ETINILESTRADIOL|DESOGESTREL|GESTODENO|DROSPIRENONA|DIENOGESTE|NORETISTERONA|NORGESTIMATO)\b/;
+  if (contraceptivo.test(texto)) return 'Anticoncepcionais';
+
+  if (/\b(?:PRESERVATIV\w*|CAMISINHA\w*|CONDOM\w*|LUBRIFICANTE\s+INTIM\w*|GEL\s+INTIM\w*|KY\s+GEL|K-Y\s+GEL)\b/.test(texto) || /^(?:PRES[. _-]|PRESERV)/.test(nome)) return 'Saúde Íntima';
+  if (/\b(?:CHUPETA\w*|MAMADEIRA\w*|BICO\s+DE\s+MAMADEIRA|MORDEDOR\w*|PORTA\s+CHUPETA)\b/.test(nome)) return 'Infantil';
+
+  // Fralda/FRALD, FRD e FR (abreviações); conferir também a classe/subclasse.
+  // 'FR' isolado só é aceito quando acompanhado de pistas claras de fraldas.
+  const fraldaNome = /\b(?:FRALD\w*|FRD[. _-]|FRD\b|PAMPERS|BABYSEC|ISABABY|HUGGIES|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT|PLENITUD|TENA|LIFREE|POM\s*POM)\b/.test(nome) ||
+    /\bFR[. _-]+(?:INF|GER|ADUL|PAMP|BABY|PCT|TAM|TENA|PLENITUD|BIGFRAL|HUGGIES|P|M|G|XG|XXG)\b/.test(nome);
+  const fraldaClasse = /\b(?:FRALD\w*|FRD|FRALDAS\s+INFANTIS|FRALDAS\s+GERIATRICAS)\b/.test(`${classe} ${subclasse}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
+  if (fraldaNome || fraldaClasse) return 'Fraldas';
 
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
