@@ -1,0 +1,8 @@
+ENTREGA PARA PUBLICACAO DIRETA NO NETLIFY
+
+1. Este ZIP contem o index.html DA LOJA na raiz. O painel esta em admin/index.html.
+2. Para evitar arquivos antigos do GitHub, use Netlify > projeto > Deploys > Deploy manually (ou drag and drop) e arraste a PASTA EXTRAIDA com index.html visivel na raiz.
+3. Se o Netlify continuar publicando pelo GitHub, confira a configuracao Publish directory = . e o ultimo deploy ativo. O proximo deploy automatico do GitHub pode substituir o manual se os arquivos do repositorio nao forem atualizados.
+4. Para atualizar GitHub: apague os arquivos antigos da raiz e suba TODOS os arquivos e pastas DE DENTRO do ZIP (nao a pasta que o envolve), mantendo index.html na raiz.
+5. Confira https://farmaciamaiseconomicabdo.com.br/ e https://farmaciamaiseconomicabdo.com.br/admin/ apos deploy.
+6. Regras de promo e classificacao ainda dependem do catalogo real Supabase; sem acesso autenticado ao banco nao e possivel atestar resultados em producao.
