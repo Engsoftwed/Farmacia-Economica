@@ -6,6 +6,15 @@
  */
 
 let dados = carregarDados();
+// Categorias da vitrine são fixas: não dependem do Supabase nem do localStorage.
+const CATEGORIAS_VITRINE = ['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Infantil','Saúde Íntima'];
+function garantirCategoriasVitrine() {
+  dados.categorias = CATEGORIAS_VITRINE.map(nome => ({
+    nome, icone: nome === 'Fraldas' ? '▣' : '✚',
+    descricao: nome === 'Fraldas' ? 'Infantis e adultas/geriátricas' : 'Ver produtos'
+  }));
+}
+garantirCategoriasVitrine();
 let sacola = [];
 let promocoesCatalogo = [];
 // Produtos de Perfumaria que, por regra comercial da loja, NÃO recebem o desconto automático de 10%.
@@ -184,12 +193,12 @@ async function carregarCatalogoSupabase() {
       prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
     }
   }
-  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Infantil','Saúde Íntima'];
-  dados.categorias = ordem.map(nome=>({nome,icone:nome==='Fraldas'?'▣':'✚',descricao:nome==='Fraldas'?'Infantis e adultas':'Ver produtos'}));
+  garantirCategoriasVitrine();
   return true;
 }
 
 function renderCategorias() {
+  garantirCategoriasVitrine();
   el.categorias.innerHTML = dados.categorias.map(c => `
     <button class="category" data-category="${c.nome}">
       <i>${c.icone}</i><b>${c.nome}</b><small>${c.descricao}</small>
@@ -791,6 +800,7 @@ async function iniciarLoja() {
       aviso.classList.remove("hidden");
     }
   }
+  garantirCategoriasVitrine();
   renderCategorias();
   renderProdutos();
   renderKits();

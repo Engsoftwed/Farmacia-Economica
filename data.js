@@ -30,7 +30,7 @@ const dadosIniciais = {
     {id:2,nome:"Protetor solar facial",marca:"Dermacare",setor:"Dermocosméticos",categoria:"Cuidados",descricao:"Proteção para a rotina diária.",preco:49.90,estoque:18,icone:"☀",ativo:true},
     {id:3,nome:"Shampoo cuidado diário",marca:"Vida",setor:"Higiene",categoria:"Higiene",descricao:"Cuidado diário para os cabelos.",preco:22.90,estoque:24,icone:"◌",ativo:true},
     {id:4,nome:"Hidratante corporal",marca:"Dermacare",setor:"Dermocosméticos",categoria:"Beleza",descricao:"Hidratação para uso diário.",preco:27.90,estoque:15,icone:"♡",ativo:true},
-    {id:5,nome:"Fraldas infantis",marca:"Baby+",setor:"Infantil",categoria:"Infantil",descricao:"Conforto e proteção.",preco:54.90,estoque:20,icone:"☼",ativo:true},
+    {id:5,nome:"Fraldas infantis",marca:"Baby+",setor:"Fraldas",categoria:"Fraldas",descricao:"Conforto e proteção.",preco:54.90,estoque:20,icone:"☼",ativo:true},
     {id:6,nome:"Kit higiene bucal",marca:"Sorriso+",setor:"Higiene",categoria:"Higiene",descricao:"Itens essenciais para a rotina.",preco:18.90,estoque:42,icone:"✦",ativo:true},
     {id:7,nome:"Curativos adesivos",marca:"Care",setor:"Primeiros Cuidados",categoria:"Cuidados",descricao:"Praticidade para pequenos cuidados.",preco:9.90,estoque:60,icone:"+",ativo:true},
     {id:8,nome:"Sabonete facial",marca:"Dermacare",setor:"Dermocosméticos",categoria:"Beleza",descricao:"Limpeza suave para a pele.",preco:24.90,estoque:17,icone:"◇",ativo:true}
