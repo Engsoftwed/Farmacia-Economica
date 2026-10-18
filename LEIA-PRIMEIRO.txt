@@ -1,7 +1,10 @@
-VERSAO V7 - CATEGORIAS ESTAVEIS
+FARMÁCIA MAIS ECONÔMICA - V8
 
-A loja abre em / e o painel continua em /admin/.
-As categorias Fraldas e Anticoncepcionais sao mantidas na vitrine mesmo se outro script tentar sobrescrever a grade.
-Para publicar, extraia este ZIP e envie a pasta que contem index.html para o projeto correto no Netlify.
-Confira /versao.html e a versao V7.
-ATENCAO: o carregamento de produtos e descontos depende dos dados e permissoes reais do Supabase.
+Loja: / (index.html)
+Painel: /admin/ (admin/index.html)
+
+As categorias Fraldas, Anticoncepcionais e Saúde Íntima estão em uma grade separada da grade dinâmica de categorias, com cliques conectados aos filtros do catálogo.
+
+Para conferir o deploy: /versao.html -> FARMACIA-CATEGORIAS-INDEPENDENTES-V8-20261018
+
+Limitação: testar conexão Supabase e cadastros de produtos em produção.

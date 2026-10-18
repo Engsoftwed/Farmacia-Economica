@@ -207,9 +207,10 @@ function renderCategorias() {
   // devolve categorias antigas ou incompletas.
   const grade = document.querySelector('#categoryGrid');
   if (!grade) return;
+  const categoriasPrincipais = CATEGORIAS_VITRINE.filter(n => !['Fraldas','Anticoncepcionais','Saúde Íntima'].includes(n));
   const existentes = Array.from(grade.querySelectorAll('[data-category]')).map(b => b.dataset.category);
-  if (existentes.length !== CATEGORIAS_VITRINE.length || CATEGORIAS_VITRINE.some((n, i) => existentes[i] !== n)) {
-    grade.innerHTML = dados.categorias.map(c => `
+  if (existentes.length !== categoriasPrincipais.length || categoriasPrincipais.some((n, i) => existentes[i] !== n)) {
+    grade.innerHTML = dados.categorias.filter(c => categoriasPrincipais.includes(c.nome)).map(c => `
       <button type="button" class="category" data-category="${c.nome}">
         <i aria-hidden="true">${c.icone}</i><b>${c.nome}</b><small>${c.descricao}</small>
       </button>
@@ -218,6 +219,16 @@ function renderCategorias() {
 }
 // Delegação de eventos: os botões continuam funcionais mesmo quando o catálogo
 // ou outro script substitui o HTML da grade.
+// Categorias essenciais vivem fora da grade dinâmica, para não desaparecerem
+// quando versões antigas do renderizador forem executadas.
+document.querySelector('#categoriasEssenciais')?.addEventListener('click', event => {
+  const botao = event.target.closest('[data-essential-category]');
+  if (!botao) return;
+  tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos'; tipoFraldaAtual='Todas';
+  renderProdutos(botao.dataset.essentialCategory);
+  document.querySelector('#ofertas')?.scrollIntoView({behavior:'smooth'});
+});
+
 document.querySelector('#categoryGrid')?.addEventListener('click', event => {
   const btn = event.target.closest('[data-category]');
   if (!btn) return;
@@ -230,7 +241,7 @@ const gradeCategorias = document.querySelector('#categoryGrid');
 if (gradeCategorias && window.MutationObserver) {
   const vigiaCategorias = new MutationObserver(() => {
     const atuais = Array.from(gradeCategorias.querySelectorAll('[data-category]')).map(b => b.dataset.category);
-    if (atuais.length !== CATEGORIAS_VITRINE.length || CATEGORIAS_VITRINE.some((n, i) => atuais[i] !== n)) {
+    if (atuais.length !== 5 || ['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'].some((n, i) => atuais[i] !== n)) {
       renderCategorias();
     }
   });
