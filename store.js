@@ -201,6 +201,7 @@ async function carregarCatalogoSupabase() {
 }
 
 function renderCategorias() {
+  window.__farmaciaCategoriasAtivas = true;
   garantirCategoriasVitrine();
   el.categorias.innerHTML = dados.categorias.map(c => `
     <button class="category" data-category="${c.nome}">

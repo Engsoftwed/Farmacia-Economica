@@ -1,6 +1,9 @@
-LOJA + PAINEL PRESERVADOS.
-index.html = loja; admin/index.html = painel.
-Categoria Fraldas e Anticoncepcionais incluídas no HTML e no JavaScript.
-Abra /versao.html e confira LOJA-FRALDAS-ANTICONCEPCIONAIS-20261018-V4 para verificar se o domínio usa esta versão.
-Se a página mostrar cinco categorias, o domínio está publicando versão antiga ou há cache.
-A classificação depende dos nomes e dados dos produtos cadastrados no Supabase; nomes de marcas sem descrição podem exigir classificação manual.
+FARMÁCIA MAIS ECONÔMICA - PUBLICAÇÃO
+
+1. Extraia este ZIP.
+2. Publique o conteúdo da pasta extraída na raiz do projeto Netlify, não dentro de /admin.
+3. Loja: /index.html; painel: /admin/index.html.
+4. Abra /versao.html e confirme FARMACIA-LOJA-PAINEL-8-CATEGORIAS-20261018.
+5. Fraldas e Anticoncepcionais estão como botões reais no HTML, independentes do Supabase.
+6. O catálogo real e regras comerciais precisam de teste com Supabase conectado.
+7. NÃO publique se o Netlify estiver apontando para outra pasta ou site.
