@@ -1,0 +1,8 @@
+CORRECAO PRIORIDADE DA LOJA
+1. Extraia este ZIP. Nao envie o ZIP fechado para o repositorio GitHub como unico arquivo.
+2. No GitHub, confirme que o index.html da RAIZ comeca com titulo "Farmácia Mais Econômica | Farmácia em Brumado-BA". Se estiver com titulo "Painel", SUBSTITUA o index.html antigo.
+3. Envie todos os arquivos e pastas mantendo a estrutura. O painel fica somente em admin/index.html.
+4. No Netlify: Build & deploy > Publish directory deve apontar para a RAIZ do repositorio (.) e o branch deve ser o que recebeu as mudancas.
+5. Confira em Deploys > ultimo deploy > Browse published deploy que o /index.html exibido e a loja.
+6. Se a raiz do site continuar exibindo o painel, a hospedagem nao esta publicando estes arquivos ou ha outro dominio/deploy/redirecionamento configurado. Nenhum ZIP consegue forcar a troca de um deploy que nao o utiliza.
+OBS: Nao apague nem altere os dados do Supabase. Teste antes de publicar.
