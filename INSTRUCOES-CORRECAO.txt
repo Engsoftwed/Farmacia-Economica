@@ -1,0 +1,9 @@
+CORRECAO CONFIRMADA - 18/10/2026
+O ZIP original tinha o PAINEL em /index.html e a LOJA em /index (1).html.
+Este pacote coloca a LOJA em /index.html e o painel em /admin/index.html.
+
+PUBLICACAO: extraia o ZIP e substitua os arquivos da RAIZ do repositorio.
+ATENCAO: nao envie a pasta externa como uma subpasta.
+Verifique que /index.html no GitHub mostra o titulo Farmacia Mais Economica, nao Painel.
+No Netlify, confirme Publish directory como a raiz e execute novo deploy.
+Nao altera dados do Supabase. Teste antes de divulgar.
