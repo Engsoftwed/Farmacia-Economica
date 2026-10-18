@@ -203,20 +203,40 @@ async function carregarCatalogoSupabase() {
 function renderCategorias() {
   window.__farmaciaCategoriasAtivas = true;
   garantirCategoriasVitrine();
-  el.categorias.innerHTML = dados.categorias.map(c => `
-    <button class="category" data-category="${c.nome}">
-      <i>${c.icone}</i><b>${c.nome}</b><small>${c.descricao}</small>
-    </button>
-  `).join("");
-
-  el.categorias.querySelectorAll("[data-category]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos'; tipoFraldaAtual='Todas';
-      renderProdutos(btn.dataset.category);
-      document.querySelector("#ofertas").scrollIntoView({behavior:"smooth"});
-    });
-  });
+  // A vitrine usa sempre a lista fixa, mesmo quando um carregamento remoto
+  // devolve categorias antigas ou incompletas.
+  const grade = document.querySelector('#categoryGrid');
+  if (!grade) return;
+  const existentes = Array.from(grade.querySelectorAll('[data-category]')).map(b => b.dataset.category);
+  if (existentes.length !== CATEGORIAS_VITRINE.length || CATEGORIAS_VITRINE.some((n, i) => existentes[i] !== n)) {
+    grade.innerHTML = dados.categorias.map(c => `
+      <button type="button" class="category" data-category="${c.nome}">
+        <i aria-hidden="true">${c.icone}</i><b>${c.nome}</b><small>${c.descricao}</small>
+      </button>
+    `).join('');
+  }
 }
+// Delegação de eventos: os botões continuam funcionais mesmo quando o catálogo
+// ou outro script substitui o HTML da grade.
+document.querySelector('#categoryGrid')?.addEventListener('click', event => {
+  const btn = event.target.closest('[data-category]');
+  if (!btn) return;
+  tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos'; tipoFraldaAtual='Todas';
+  renderProdutos(btn.dataset.category);
+  document.querySelector('#ofertas')?.scrollIntoView({behavior:'smooth'});
+});
+// Reage a substituições externas sem depender de temporizadores ou Supabase.
+const gradeCategorias = document.querySelector('#categoryGrid');
+if (gradeCategorias && window.MutationObserver) {
+  const vigiaCategorias = new MutationObserver(() => {
+    const atuais = Array.from(gradeCategorias.querySelectorAll('[data-category]')).map(b => b.dataset.category);
+    if (atuais.length !== CATEGORIAS_VITRINE.length || CATEGORIAS_VITRINE.some((n, i) => atuais[i] !== n)) {
+      renderCategorias();
+    }
+  });
+  vigiaCategorias.observe(gradeCategorias, {childList:true});
+}
+
 
 function placeholderProduto(produto) {
   // O placeholder segue a categoria FINAL do catálogo, não palavras soltas do nome.
