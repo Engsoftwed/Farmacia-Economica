@@ -792,7 +792,15 @@ function ativarAtualizacaoAutomatica() {
 }
 
 async function iniciarLoja() {
-  await carregarConfiguracoesLoja();
+  // Exibir categorias e vitrine imediatamente, mesmo se a rede ou Supabase travarem.
+  garantirCategoriasVitrine();
+  renderCategorias();
+  renderProdutos();
+  try {
+    await carregarConfiguracoesLoja();
+  } catch (erro) {
+    console.warn("Configurações indisponíveis; mantendo vitrine inicial.", erro);
+  }
   try {
     await carregarCatalogoSupabase();
   } catch (erro) {
