@@ -1,0 +1,9 @@
+CORRECAO DA PAGINA INICIAL
+
+A loja abre em / ou /index.html. O painel abre apenas em /admin/ ou /admin/index.html.
+
+GITHUB: extraia o ZIP e envie os arquivos da raiz (index.html, admin/, assets/, etc.) para a raiz do repositorio; nao publique somente a pasta admin. Confira Settings > Pages > Build and deployment: branch correta e pasta /(root).
+
+Se o dominio continuar abrindo /admin/, verifique redirecionamentos configurados na hospedagem e favoritos do navegador. A configuracao do servidor nao pode ser alterada apenas pelo ZIP.
+
+Teste primeiro o endereco do site com /index.html e depois com /admin/. Limpe cache com Ctrl+F5.
