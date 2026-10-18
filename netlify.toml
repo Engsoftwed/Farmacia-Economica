@@ -2,6 +2,11 @@
   publish = "."
 
 [[headers]]
-  for = "/*"
+  for = "/*.html"
   [headers.values]
     Cache-Control = "no-cache, max-age=0, must-revalidate"
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
