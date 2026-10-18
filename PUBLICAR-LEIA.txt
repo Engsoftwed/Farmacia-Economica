@@ -1,0 +1,10 @@
+LOJA E PAINEL JUNTOS
+
+Este ZIP tem index.html (LOJA) e admin/index.html (PAINEL).
+IMPORTANTE: Um ZIP nao consegue alterar sozinho qual deploy esta ativo no Netlify.
+
+Para evitar a versao antiga no GitHub: no Netlify > Deploys, publique MANUALMENTE a pasta EXTRAIDA deste ZIP, com index.html diretamente na raiz. Confirme que o deploy manual ficou como Published.
+Se o Netlify continuar mostrando o painel, confira em Domain management se o dominio esta no MESMO site Netlify onde fez o deploy.
+
+Loja: /
+Painel: /admin/
