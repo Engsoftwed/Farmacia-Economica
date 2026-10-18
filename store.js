@@ -48,6 +48,7 @@ let filtroAtual = "Todos";
 let termoAtual = "";
 let tipoBelezaAtual = "Todos";
 let detalheBelezaAtual = "Todos";
+let tipoFraldaAtual = 'Todas';
 
 // Referências da interface. Mantidas em um único lugar para evitar falhas silenciosas
 // quando o catálogo remoto terminar de carregar.
@@ -81,6 +82,12 @@ function categoriaLoja(p) {
   const texto = `${p.produto || ''} ${p.laboratorio || ''} ${classe} ${subclasse}`
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+  // Saúde íntima e itens infantis devem ser identificados antes da classe legada.
+  if (/\b(PRESERVATIV|CAMISINHA|CONDOM|LUBRIFICANTE INTIM|GEL INTIM|KY GEL|K-Y GEL)\b/.test(nome) || /^(PRES[. _-]|PRESERV)/.test(nome)) return 'Saúde Íntima';
+  if (/\b(CHUPETA|MAMADEIRA|BICO DE MAMADEIRA|MORDEDOR|PORTA CHUPETA)\b/.test(nome)) return 'Infantil';
+  // Fraldas têm categoria própria. O nome prevalece sobre classes antigas do sistema.
+  if (/\b(FRALDAS?|PAMPERS|BABYSEC|ISABABY|HUGGIES|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b/.test(nome)) return 'Fraldas';
 
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
@@ -177,8 +184,8 @@ async function carregarCatalogoSupabase() {
       prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
     }
   }
-  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
-  dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
+  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Infantil','Saúde Íntima'];
+  dados.categorias = ordem.map(nome=>({nome,icone:nome==='Fraldas'?'▣':'✚',descricao:nome==='Fraldas'?'Infantis e adultas':'Ver produtos'}));
   return true;
 }
 
@@ -191,7 +198,7 @@ function renderCategorias() {
 
   el.categorias.querySelectorAll("[data-category]").forEach(btn => {
     btn.addEventListener("click", () => {
-      tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos';
+      tipoBelezaAtual='Todos'; detalheBelezaAtual='Todos'; tipoFraldaAtual='Todas';
       renderProdutos(btn.dataset.category);
       document.querySelector("#ofertas").scrollIntoView({behavior:"smooth"});
     });
@@ -206,6 +213,8 @@ function placeholderProduto(produto) {
 
   if (categoria === 'Medicamentos Éticos e Similares Equivalentes') {
     tipo = 'medicamentos'; simbolo = '✚'; titulo = 'Medicamentos';
+  } else if (categoria === 'Fraldas') {
+    tipo = 'infantil'; simbolo = '▣'; titulo = 'Fraldas';
   } else if (categoria === 'Infantil') {
     tipo = 'infantil'; simbolo = '♡'; titulo = 'Linha Infantil';
   } else if (categoria === 'Perfumaria' || categoria === 'Cosméticos') {
@@ -227,7 +236,12 @@ function obterOfertaProduto(produto) {
 
   // REGRA SEGURA: não existe desconto automático por categoria, genérico ou preço à vista.
   // Só entra em promoção quando o painel cadastrou explicitamente um desconto.
-  if (!produto.excecaoPromocao) {
+  // Promoções presenciais/placas não devem gerar desconto no catálogo online.
+  // O Florax não recebe desconto automático; somente percentual explícito no produto.
+  const nomeNormalizado = normalizarNomeProduto(produto.nome);
+  const excecao = normalizarNomeProduto(produto.excecaoPromocao);
+  const bloqueioPresencial = /PRESENCIAL|PLACA|SEM DESCONTO|PROMOCAO DE LOJA/.test(excecao);
+  if (!bloqueioPresencial) {
     const descontoFixo = Math.max(0, Number(produto.descontoFixo || 0));
     const regras = promocoesCatalogo.filter(r => {
       if (!r.ativo) return false;
@@ -236,7 +250,8 @@ function obterOfertaProduto(produto) {
       if (r.tipo === "subclasse") return r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse;
       return false;
     });
-    const descontoRegra = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
+    const descontoRegra = /\bFLORAX\b/.test(nomeNormalizado) || excluidoPromo10(produto) || /GENERICO|GENERICA/.test(normalizarNomeProduto(produto.subclasse || produto.classeOriginal))
+      ? 0 : (regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0);
     const descontoAplicado = Math.min(100, Math.max(descontoFixo, descontoRegra));
     if (descontoAplicado > 0 && precoCheio > 0) {
       precoFinal = precoCheio * (1 - descontoAplicado / 100);
@@ -266,6 +281,7 @@ function cardProduto(produto) {
       <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
       <p>${produto.descricao}</p>
       ${promoQuantidade(produto) ? `<div class="quantity-promo">${promoQuantidade(produto).texto}</div>` : ""}
+      ${/ANTICONCEPC|CONTRACEPTIV/.test(normalizarNomeProduto(produto.nome)) && /GENERICO|GENERICA/.test(normalizarNomeProduto(`${produto.subclasse} ${produto.setor} ${produto.nome}`)) ? `<div class="quantity-promo">Anticoncepcional genérico (não original): consulte o desconto na caixa diretamente com a farmácia.</div>` : ""}
       <div class="product-bottom">
         <div class="price-box">
           ${oferta.desconto ? `<del>${moeda(oferta.precoCheio)}</del>` : ""}
@@ -324,8 +340,20 @@ function renderPaginacao(totalItens) {
   });
 }
 
+function tipoFralda(p) {
+  const nome=String(p.nome||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  if (/GERIATR|ADULT|INCONTIN|SENIOR|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT|PLENITUD|TENA|LIFREE/.test(nome)) return 'Adultas / Geriátricas';
+  return 'Infantis';
+}
+
 function renderSubfiltrosCatalogo(listaBase) {
   if (!el.subfiltros) return;
+  if (filtroAtual === 'Fraldas') {
+    el.subfiltros.classList.remove('hidden');
+    el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Tipo de fralda:</b>${['Todas','Infantis','Adultas / Geriátricas'].map(t=>`<button class="subfilter-btn small ${tipoFraldaAtual===t?'active':''}" data-tipo-fralda="${t}">${t}</button>`).join('')}</div>`;
+    el.subfiltros.querySelectorAll('[data-tipo-fralda]').forEach(b=>b.onclick=()=>{tipoFraldaAtual=b.dataset.tipoFralda;renderProdutos('Fraldas',termoAtual)});
+    return;
+  }
   if (!['Perfumaria','Cosméticos'].includes(filtroAtual)) {
     el.subfiltros.innerHTML = '';
     el.subfiltros.classList.add('hidden');
@@ -362,7 +390,8 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria
-    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
+    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual)
+    .filter(p => filtroAtual !== 'Fraldas' || tipoFraldaAtual === 'Todas' || tipoFralda(p) === tipoFraldaAtual);
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / PRODUTOS_POR_PAGINA));
   if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;

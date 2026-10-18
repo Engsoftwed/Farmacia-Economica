@@ -1,0 +1,11 @@
+FARMÁCIA MAIS ECONÔMICA — ENTREGA PARA TESTE
+
+Publicar os arquivos DE DENTRO do ZIP na raiz do repositório (index.html na raiz).
+O painel permanece em /admin/. Não publicar a pasta inteira como subdiretório.
+
+Correções de código: fraldas infantis/adultas, chupetas em Infantil, saúde íntima, exceções de desconto e aviso de anticoncepcional genérico.
+
+ATENÇÃO: NÃO É POSSÍVEL CONFIRMAR PREÇOS/PLACAS/ESTOQUES SEM ACESSO AO CADASTRO REAL DO SUPABASE.
+A promoção de produtos misturados de laboratórios diferentes ainda não é suportada: o painel aplica a promoção por produto.
+Testar o fluxo de compra e os dados reais antes de substituir a produção.
+O sincronizador Pharmagno NÃO está incluído: ele é um serviço separado.
