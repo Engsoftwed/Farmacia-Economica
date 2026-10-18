@@ -82,9 +82,14 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
+  // Prioridade por nome: evita herdar classificações erradas do ERP.
+  if (/\b(PRESERVATIV|CAMISINHA|BLOWTEX|JONTEX|PRUDENCE|LUBRIFICANTE\s+INTIM|GEL\s+INTIM)\b/.test(nome)) return 'Saúde Íntima';
+  if (/\b(CHUPETA|MAMADEIRA|BICO\s+DE\s+MAMADEIRA|MORDEDOR)\b/.test(nome)) return 'Infantil';
+  if (/\b(OLEO\s+MURIEL|DESODORANTE|SABONETE\s+POM\s*POM|LENCOS?\s+UMEDECIDOS?)\b/.test(nome)) return 'Perfumaria';
+  if (/\b(FR(ALDA|ALDAS)|FR\.?\s*GERIATR|PAMPERS|HUGGIES|BABYSEC|ISABABY|MASTER\s*PANTS|BIGFRAL)\b/.test(nome)) return 'Fraldas';
   // Fraldas de qualquer faixa etária ficam exclusivamente na categoria Fraldas.
   // Não confundir com pomadas para assaduras, lenços ou absorventes.
-  if (/\b(FRALDAS?|FR\.?\s*GERIATRIC[AO]S?|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POM\s*POM)\b/.test(nome)) return 'Fraldas';
+  if (/\b(FRALDAS?|FR\.?\s*GERIATRIC[AO]S?|PAMPERS|HUGGIES|BABYSEC|ISABABY|MASTER\s*PANTS|BIGFRAL)\b/.test(nome)) return 'Fraldas';
   // Medicamentos xaropes abreviados (XP / XPE) e antissépticos bucais medicinais.
   if (/\b(XP|XPE|XAROPE)\b/.test(nome) && /\b(AMBROX|ACEBROFIL|ACETILCIST|DEXCLORFEN|LORATADIN|SALBUTAMOL|BROMEXIN)\w*/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
   if (/\bANTISSEPTICO\s+BUCAL\b/.test(nome)) return 'Higiene';
@@ -164,7 +169,7 @@ async function carregarCatalogoSupabase() {
     const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
     const classeCatalogo = categoriaLoja(p);
     const usaCatalogoBeleza = especial && ['Perfumaria','Cosméticos'].includes(classeCatalogo);
-    const subclasseCatalogo = usaCatalogoBeleza ? especial.tipo : (p.subclasse||'');
+    const subclasseCatalogo = classeCatalogo === 'Fraldas' ? (/GERIATR|ADULTO|INCONTIN|SENIOR|BIGFRAL|CONFORT\s*MASTER/i.test(p.produto) ? 'Adulto / Geriátrica' : 'Infantil') : (usaCatalogoBeleza ? especial.tipo : (p.subclasse||''));
     return {
     id:p.id, codigo:p.codigo, nome:p.produto, marca:p.laboratorio||'',
     setor:subclasseCatalogo || p.classe || 'Higiene', subclasse:subclasseCatalogo,
@@ -190,8 +195,8 @@ async function carregarCatalogoSupabase() {
       prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
     }
   }
-  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Diversos'];
-  dados.categorias = ordem.filter(nome=>nome==='Fraldas'||dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
+  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil','Fraldas','Saúde Íntima','Diversos'];
+  dados.categorias = ordem.filter(nome=>['Fraldas','Saúde Íntima'].includes(nome)||dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
   return true;
 }
 
@@ -250,7 +255,10 @@ function obterOfertaProduto(produto) {
       return false;
     });
     const descontoRegra = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
-    const descontoAplicado = Math.min(100, Math.max(descontoFixo, descontoRegra));
+    const nomeNorm = normalizarNomeProduto(produto.nome);
+    const generico = /\bGENERICO\b/.test(normalizarNomeProduto(`${produto.subclasse} ${produto.classeOriginal}`));
+    const semDescontoSite = /\b(FLORAX|SABONETE POM POM|LENCO UMED BEBE SHOW|DESODORANTE NIVEA|OLEO MURIEL|PRESERVATIVO BLOWTEX|FRALDA GERIATRICA CONFORT|FRALDA GERIAT CONFORT|FRALDA ADULTO BIGFRAL|FRALDA GERIATRICA CONFORNT)\b/.test(nomeNorm);
+    const descontoAplicado = Math.min(100, Math.max(descontoFixo, (!generico && !semDescontoSite) ? descontoRegra : 0));
     if (descontoAplicado > 0 && precoCheio > 0) {
       precoFinal = precoCheio * (1 - descontoAplicado / 100);
       origem = "Promoção cadastrada no painel";
@@ -278,6 +286,7 @@ function cardProduto(produto) {
       <div class="brand-name">${produto.marca}${produto.eanReferencia ? ` • EAN ${produto.eanReferencia}` : ` • ${produto.setor}`}</div>
       <div class="stock-info">Em estoque: <strong>${Math.max(0, Number(produto.estoque || 0))}</strong> un.</div>
       <p>${produto.descricao}</p>
+      ${/\b(ANTICONCEPC|DROSP|ETINIL)\b/.test(normalizarNomeProduto(produto.nome)) && /GENERICO/.test(normalizarNomeProduto(`${produto.subclasse} ${produto.classeOriginal} ${produto.nome}`)) ? `<div class="quantity-promo">Anticoncepcional genérico: consulte o desconto na caixa com a farmácia.</div>` : ""}
       ${promoQuantidade(produto) ? `<div class="quantity-promo">${promoQuantidade(produto).texto}</div>` : ""}
       <div class="product-bottom">
         <div class="price-box">
@@ -339,12 +348,12 @@ function renderPaginacao(totalItens) {
 
 function renderSubfiltrosCatalogo(listaBase) {
   if (!el.subfiltros) return;
-  if (!['Perfumaria','Cosméticos'].includes(filtroAtual)) {
+  if (!['Perfumaria','Cosméticos','Fraldas','Saúde Íntima'].includes(filtroAtual)) {
     el.subfiltros.innerHTML = '';
     el.subfiltros.classList.add('hidden');
     return;
   }
-  const detalhes = ['Todos', ...new Set(listaBase.map(p=>p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const detalhes = ['Todos', ...new Set(listaBase.map(p=>['Fraldas','Saúde Íntima'].includes(filtroAtual) ? p.subclasse : p.categoriaDetalhe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
   el.subfiltros.classList.remove('hidden');
   el.subfiltros.innerHTML = `<div class="subfilter-block"><b>Categoria:</b>${detalhes.map(t=>`<button class="subfilter-btn small ${detalheBelezaAtual===t?'active':''}" data-detalhe-beleza="${t}">${t}</button>`).join('')}</div>`;
   el.subfiltros.querySelectorAll('[data-detalhe-beleza]').forEach(b=>b.onclick=()=>{detalheBelezaAtual=b.dataset.detalheBeleza;renderProdutos(filtroAtual,termoAtual)});
@@ -375,7 +384,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria
-    .filter(p => !['Perfumaria','Cosméticos'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || p.categoriaDetalhe === detalheBelezaAtual);
+    .filter(p => !['Perfumaria','Cosméticos','Fraldas','Saúde Íntima'].includes(filtroAtual) || detalheBelezaAtual === 'Todos' || (['Fraldas','Saúde Íntima'].includes(filtroAtual) ? p.subclasse : p.categoriaDetalhe) === detalheBelezaAtual);
 
   const totalPaginas = Math.max(1, Math.ceil(lista.length / PRODUTOS_POR_PAGINA));
   if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;

@@ -1,0 +1,11 @@
+CORREÇÕES DE CLASSIFICAÇÃO — 18/10/2026
+
+Atualizado assets/js/store.js (arquivo realmente carregado por index.html).
+Fraldas: categoria independente, com filtros Infantil e Adulto/Geriátrica.
+Saúde Íntima: preservativos e lubrificantes íntimos.
+Chupetas/mamadeiras: Infantil, fora de Fraldas.
+Produtos de perfumaria identificáveis não herdam categoria de medicamentos.
+Bloqueio de descontos gerais em exemplos de placas de promoção e genéricos.
+Florax: descontos gerais bloqueados, mas desconto individual explícito continua permitido.
+
+IMPORTANTE: dados vêm do Supabase. Esta atualização não altera tabelas, estoque, preços ou placas de promoção do ERP. A regra de Leve X por preço já existente é POR PRODUTO; uma promoção combinando produtos diferentes/laboratórios requer regra própria de agrupamento e configuração no banco/painel, NÃO implementada nesta versão. Valide preços com o responsável antes de publicar. Backup do site atual recomendado.
