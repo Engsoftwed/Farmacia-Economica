@@ -7,11 +7,11 @@
 
 let dados = carregarDados();
 // Categorias da vitrine são fixas: não dependem do Supabase nem do localStorage.
-const CATEGORIAS_VITRINE = ['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Infantil','Saúde Íntima'];
+const CATEGORIAS_VITRINE = ['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Anticoncepcionais','Infantil','Saúde Íntima'];
 function garantirCategoriasVitrine() {
   dados.categorias = CATEGORIAS_VITRINE.map(nome => ({
     nome, icone: nome === 'Fraldas' ? '▣' : '✚',
-    descricao: nome === 'Fraldas' ? 'Infantis e adultas/geriátricas' : 'Ver produtos'
+    descricao: nome === 'Fraldas' ? 'Infantis e adultas/geriátricas' : nome === 'Anticoncepcionais' ? 'Consulte opções disponíveis' : 'Ver produtos'
   }));
 }
 garantirCategoriasVitrine();
@@ -92,11 +92,14 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
+  // Anticoncepcionais: produtos explicitamente identificados no cadastro.
+  // Não classificar qualquer hormônio como contraceptivo sem evidência.
+  if (/\b(ANTICONCEPC|CONTRACEPTIV|PILULA DO DIA SEGUINTE|LEVONORGESTREL|ETINILESTRADIOL|DESOGESTREL|GESTODENO|DROSPIRENONA|DIENOGESTE)\b/.test(nome) || /\bANTICONCEPC|CONTRACEPTIV/.test(texto)) return 'Anticoncepcionais';
   // Saúde íntima e itens infantis devem ser identificados antes da classe legada.
-  if (/\b(PRESERVATIV|CAMISINHA|CONDOM|LUBRIFICANTE INTIM|GEL INTIM|KY GEL|K-Y GEL)\b/.test(nome) || /^(PRES[. _-]|PRESERV)/.test(nome)) return 'Saúde Íntima';
+  if (/\b(PRESERVATIV\w*|CAMISINHA\w*|CONDOM\w*|LUBRIFICANTE\s+INTIM\w*|GEL\s+INTIM\w*|KY GEL|K-Y GEL)\b/.test(nome) || /^(PRES[. _-]|PRESERV)/.test(nome)) return 'Saúde Íntima';
   if (/\b(CHUPETA|MAMADEIRA|BICO DE MAMADEIRA|MORDEDOR|PORTA CHUPETA)\b/.test(nome)) return 'Infantil';
   // Fraldas têm categoria própria. O nome prevalece sobre classes antigas do sistema.
-  if (/\b(FRALDAS?|PAMPERS|BABYSEC|ISABABY|HUGGIES|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT)\b/.test(nome)) return 'Fraldas';
+  if (/\b(FRALDAS?|PAMPERS|BABYSEC|ISABABY|HUGGIES|MASTERFRAL|BIGFRAL|CONFORTMASTER|CONFORTCARE|MASTERSOFT|PLENITUD|TENA|LIFREE)\b/.test(nome)) return 'Fraldas';
 
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.

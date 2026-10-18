@@ -1,13 +1,6 @@
-FARMÁCIA MAIS ECONÔMICA — LOJA + PAINEL
-
-ARQUIVOS: index.html é a LOJA; admin/index.html é o PAINEL.
-
-PUBLICAÇÃO NO NETLIFY
-1. Extraia o ZIP.
-2. No projeto Netlify que tem o domínio farmaciamaiseconomicabdo.com.br, vá em Deploys e faça deploy manual da pasta EXTRAÍDA (a pasta que contém index.html e admin/).
-3. Aguarde o deploy ficar Published / Production.
-4. Abra https://farmaciamaiseconomicabdo.com.br/versao.html .
-   Se NÃO aparecer 'LOJA-PAINEL-20261018-C', o domínio NÃO está servindo este pacote. Não adianta trocar arquivos locais; verifique o projeto/domínio e o deploy de produção.
-5. Abra / para a loja e /admin/ para o painel.
-
-ATENÇÃO: Este ZIP não substitui os dados no Supabase. Não foi possível testar login e catálogo com banco online. O painel está preservado no pacote.
+LOJA + PAINEL PRESERVADOS.
+index.html = loja; admin/index.html = painel.
+Categoria Fraldas e Anticoncepcionais incluídas no HTML e no JavaScript.
+Abra /versao.html e confira LOJA-FRALDAS-ANTICONCEPCIONAIS-20261018-V4 para verificar se o domínio usa esta versão.
+Se a página mostrar cinco categorias, o domínio está publicando versão antiga ou há cache.
+A classificação depende dos nomes e dados dos produtos cadastrados no Supabase; nomes de marcas sem descrição podem exigir classificação manual.
