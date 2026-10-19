@@ -92,6 +92,13 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
+  // A classe explicitamente revisada no Supabase tem prioridade sobre inferências por nome.
+  // Não transformar anticoncepcionais em medicamentos comuns nem lubrificantes em higiene.
+  const classeRevisada = classe.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  if (classeRevisada === 'FRALDAS') return 'Fraldas';
+  if (classeRevisada === 'ANTICONCEPCIONAIS') return 'Anticoncepcionais';
+  if (classeRevisada === 'SAUDE INTIMA') return 'Saúde Íntima';
+
   // Classificação pelo cadastro REAL (nome, classe e subclasse). Não cria produtos.
   // Aceita abreviações frequentes em cadastros de farmácia, sem usar apenas a marca
   // quando ela pode identificar outros tipos de produtos.
@@ -169,6 +176,7 @@ async function carregarCatalogoSupabase() {
   const headers = { apikey: cfg.key, Authorization: `Bearer ${cfg.key}` };
   const endpoint = `${cfg.url}/rest/v1/produtos_pharmagno?select=id,codigo,produto,laboratorio,classe,subclasse,preco_prazo,preco_vista,estoque,imagem_url,desconto_fixo_pct,excecao_promocao,promocao_manual,ativo&ativo=eq.true&estoque=gt.0&order=produto.asc`;
   const linhas = await carregarTodasPaginas(endpoint, headers);
+  console.info(`[Farmácia] Catálogo remoto: ${linhas.length} produtos ativos e com estoque recebidos.`);
   try {
     const rr = await fetch(`${cfg.url}/rest/v1/promocoes_catalogo?select=*&ativo=eq.true`, {headers});
     promocoesCatalogo = rr.ok ? await rr.json() : [];
@@ -195,6 +203,7 @@ async function carregarCatalogoSupabase() {
     descricao:usaCatalogoBeleza ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
   };
   });
+  console.info("[Farmácia] Categorias sincronizadas:", Object.fromEntries(["Fraldas","Anticoncepcionais","Saúde Íntima"].map(c => [c, dados.produtos.filter(p => p.categoria === c).length])));
   // Aplica "Leve X por preço" apenas ao produto explicitamente selecionado no painel.
   const deals=(dados.quantityDeals||[]).filter(d=>d.ativo!==false);
   for(const d of deals){
