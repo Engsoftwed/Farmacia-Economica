@@ -1,0 +1,18 @@
+CORREÇÃO DE CATEGORIAS E FLUXO DE COMPRA — 26/10/2026
+
+Arquivo alterado: assets/js/store.js (é o arquivo carregado por index.html).
+
+O que foi corrigido:
+- Fraldas: botão agora responde ao clique e filtra fraldas infantis e adultas/geriátricas pelo nome/apresentação, sem depender da classe antiga do ERP.
+- Anticoncepcionais: botão agora responde ao clique e filtra os produtos identificados por nomes e marcas comuns de anticoncepcionais.
+- Saúde Íntima: botão agora responde ao clique e filtra preservativos e lubrificantes identificados no catálogo.
+- As três categorias especiais limpam a busca anterior e levam o cliente até a lista de produtos.
+- O filtro continua respeitando produto ativo e estoque maior que zero; preços, promoções e estoque permanecem provenientes do catálogo já configurado.
+- Corrigido também o clique de adicionar à sacola para comparar IDs como texto, evitando falhas quando o identificador do produto não for numérico.
+
+Compra: o site mantém o fluxo existente de sacola e envio do pedido pelo WhatsApp. Este pacote não cria processamento de cartão/Pix nem altera o banco de dados/ERP.
+
+Importante:
+- Os itens exibidos dependem dos produtos ativos, estoque e nomes que o Supabase/Pharmagno fornece. Se um produto não estiver cadastrado ou tiver nome muito diferente dos padrões reconhecidos, ele poderá precisar de ajuste no catálogo.
+- Anticoncepcionais e outros medicamentos devem seguir as regras legais aplicáveis; o site encaminha o pedido para confirmação pela farmácia.
+- Depois de publicar, teste as três categorias, adição/remoção na sacola e envio do pedido pelo WhatsApp em desktop e celular.
