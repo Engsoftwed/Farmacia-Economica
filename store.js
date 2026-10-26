@@ -347,16 +347,18 @@ function categoriaCatalogoSegura(produto) {
 // Categorias especiais são filtros transversais: encontram produtos pelo nome,
 // sem depender da classificação legada recebida do ERP.
 function pertenceCategoriaEspecial(produto, categoria) {
-  const nome = normalizarNomeProduto(`${produto?.nome || ''} ${produto?.marca || ''} ${produto?.setor || ''} ${produto?.subclasse || ''}`);
+  // Usa nome, marca, setor, subclasse e categoria do catálogo; normalização remove acentos.
+  const nome = normalizarNomeProduto(`${produto?.nome || ''} ${produto?.marca || ''} ${produto?.setor || ''} ${produto?.subclasse || ''} ${produto?.categoria || ''}`);
   if (categoria === 'Fraldas') {
-    return /(FRALDA|FRALDAS|PANTS|ROUPA INTIMA DESCARTAVEL)/.test(nome) ||
-      /(BIGFRAL|MASTERFRAL|CONFORTMASTER|MASTERSOFT|CONFORTCARE|PAMPERS|BABYSEC|HUGGIES|ISABABY)/.test(nome);
+    return /\b(FRALDA|FRALDAS|PANTS|ROUPA INTIMA DESCARTAVEL|INCONTINENCIA|ABSORVENTE GERIATRICO)\b/.test(nome) ||
+      /\b(BIGFRAL|MASTERFRAL|CONFORTMASTER|MASTERSOFT|CONFORTCARE|PAMPERS|BABYSEC|HUGGIES|ISABABY|PERSONAL BABY|POM POM|PIQUITUCHO|MILI BABY|TURMA DA MONICA BABY)\b/.test(nome);
   }
   if (categoria === 'Anticoncepcionais') {
-    return /(ANTICONCEPCIONAL|CONTRACEPTIVO|CICLO 21|MICROVLAR|SELENE|LEVEL|TAMISA|YAZ|YASMIN|DIANE 35|PERLUTAN|DEPO PROVERA|DEPOPROVERA|NOREGYNA|NEOVLAR|MESIGYNA|EVRA|IMPLANON|MINIMA|MICRODIOL|FEMINA|ELANI|Q LAIRA|QLAIRA|BELARA|SIBILLA|TESS|STEZZA)/.test(nome);
+    return /\b(ANTICONCEPCIONAL|CONTRACEPTIVO|CICLO 21|MICROVLAR|SELENE|LEVEL|TAMISA|YAZ|YASMIN|DIANE 35|PERLUTAN|DEPO PROVERA|DEPOPROVERA|NOREGYNA|NEOVLAR|MESIGYNA|EVRA|IMPLANON|MINIMA|MICRODIOL|FEMINA|ELANI|Q LAIRA|QLAIRA|BELARA|SIBILLA|TESS|STEZZA|LEVONORGESTREL|ETINILESTRADIOL|DESOGESTREL|DROSPIRENONA|NORGESTIMATO|GESTODENO|NORETISTERONA)\b/.test(nome);
   }
   if (categoria === 'Saúde Íntima') {
-    return /(PRESERVATIVO|CAMISINHA|LUBRIFICANTE INTIMO|GEL LUBRIFICANTE|LUBRIFICANTE|KY GEL|PRUDENCE|O O BOLAS)/.test(nome);
+    return /\b(PRESERVATIVO|CAMISINHA|LUBRIFICANTE|GEL LUBRIFICANTE|GEL INTIMO|GEL INTIMO|KY GEL|PRUDENCE|OB|O B|ABSORVENTE INTIMO|PROTETOR DIARIO|DUCHA INTIMA)\b/.test(nome) ||
+      /\b(SEX FREE|JONTEX|SKYN|DUREX|K-MED|KMED)\b/.test(nome);
   }
   return false;
 }
