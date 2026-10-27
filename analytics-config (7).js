@@ -1,0 +1,1 @@
+window.FARMACIA_GA4_ID = "G-R9R11TZZVY";
