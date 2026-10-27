@@ -432,6 +432,21 @@ function categoriaCatalogoSegura(produto) {
   return produto?.categoria || "Higiene";
 }
 
+function correspondeCategoriaEspecial(produto, categoria) {
+  const texto = `${produto?.nome || ''} ${produto?.marca || ''} ${produto?.categoria || ''} ${produto?.setor || ''} ${produto?.subclasse || ''} ${produto?.descricao || ''}`
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  if (categoria === 'Fraldas') {
+    return /\b(FRALDAS?|PANTS|ROUPA INTIMA DESCARTAVEL|INCONTINENCIA|GERIATRIC[AO]S?|DERMACARE FRALDA)\b/.test(texto);
+  }
+  if (categoria === 'Anticoncepcionais') {
+    return /\b(ANTICONCEPCIONAIS?|CONTRACEPTIVOS?|ETINILESTRADIOL|LEVONORGESTREL|DESOGESTREL|DROSPIRENONA|NORETISTERONA|GESTODENO|CIPROTERONA|MICROVLAR|CICLO ?21|SELENE|YASMIN|YAZ|TAMISA|LEVEL|MESIGYNA|DEPO.PROVERA|INJETAVEL MENSAL)\b/.test(texto);
+  }
+  if (categoria === 'Saúde Íntima' || categoria === 'Saude Intima') {
+    return /\b(PRESERVATIVOS?|CAMISINHAS?|LUBRIFICANTES? INTIMOS?|GEL LUBRIFICANTE|GEL INTIMO|SAUDE INTIMA|TESTE DE GRAVIDEZ)\b/.test(texto);
+  }
+  return false;
+}
+
 function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   filtroAtual = filtro;
   termoAtual = termo;
@@ -446,7 +461,11 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   const listaCategoria = dados.produtos
     .filter(p => !idsExclusivos.has(String(p.id)) && !nomesExclusivos.has(String(p.nome || '').trim().toLowerCase()))
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
-    .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
+    .filter(p => {
+      if (filtroAtual === "Todos") return true;
+      if (['Fraldas','Anticoncepcionais','Saúde Íntima','Saude Intima'].includes(filtroAtual)) return correspondeCategoriaEspecial(p, filtroAtual);
+      return categoriaCatalogoSegura(p) === filtroAtual;
+    })
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
   renderSubfiltrosCatalogo(listaCategoria);
   const lista = listaCategoria

@@ -1,0 +1,7 @@
+CORREÇÃO DE FILTRO DAS CATEGORIAS ESPECIAIS
+
+Este pacote preserva os arquivos da versão-base e altera somente assets/js/store.js e a versão do script em index.html.
+
+As categorias Fraldas, Anticoncepcionais e Saúde Íntima agora filtram os produtos ativos do catálogo usando nome, marca, categoria, setor, subclasse e descrição. O filtro respeita a condição existente de produto ativo e estoque maior que zero.
+
+IMPORTANTE: se uma categoria continuar vazia, o catálogo Supabase não contém produtos ativos/com estoque cujos dados correspondam aos termos de classificação. Não foram inventados preços ou estoque. Cadastre os produtos reais no painel/banco para que apareçam.
