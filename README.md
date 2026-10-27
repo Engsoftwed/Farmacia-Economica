@@ -1,69 +1,71 @@
-# Farmácia Mais Econômica — Projeto comercial
+# Sincronizador automático Pharmagno → Supabase → Site
 
-## Abrir a demonstração
+Este componente foi preparado para rodar **no computador/servidor da farmácia que consegue acessar o banco do Pharmagno**.
 
-Abra `index.html`.
+## O que ele sincroniza
 
-Painel administrativo:
-`admin/index.html`
+A cada 30 segundos, por padrão, ele consulta o Firebird do Pharmagno e compara com a tabela `produtos_pharmagno` no Supabase.
 
-Não é necessário instalar Node.js para esta demonstração.
+Ele atualiza somente quando houver mudança em:
 
-## Importante
+- preço cheio (`PRECOVENDA` → `preco_prazo`);
+- preço promocional calculado pelo Pharmagno (`PROMOCAO` → `preco_vista`);
+- estoque (`ESTOQUEATUAL` → `estoque`);
+- nome/apresentação do produto, se `SYNC_PRODUCT_NAME=true`.
 
-A versão incluída no ZIP usa `localStorage` para demonstrar produtos, promoções e configurações. Ela NÃO possui banco online nem autenticação real de administrador.
+Produtos novos também podem ser cadastrados automaticamente no Supabase.
 
-Para produção, conecte a camada de dados ao Supabase e proteja o painel com autenticação.
+O sincronizador **não sobrescreve foto, classe, subclasse, laboratório, promoções manuais nem outras personalizações feitas no painel**.
 
-## Recursos incluídos
+## Por que ele precisa ficar na farmácia
 
-- loja responsiva;
-- catálogo;
-- pesquisa;
-- categorias;
-- sacola;
-- WhatsApp;
-- motor de promoções;
-- promoção por produto;
-- promoção por marca;
-- promoção por setor;
-- promoção por categoria;
-- promoção no site inteiro;
-- datas de campanha;
-- painel de produtos;
-- estoque demonstrativo;
-- integrações/entrega configuráveis;
-- campos para 99, Giross e Quero Delivery;
-- configurações gerais;
-- documentação técnica.
+O arquivo do banco informado pela MAGNO SYSTEM fica, por padrão, em:
 
-Leia `docs/GUIA_TECNICO.md` antes de apresentar o sistema.
+`C:\MAGNO SYSTEM\PHARMAGNO\SISGEMP.FDB`
 
+Esse arquivo normalmente está dentro da rede/computador da farmácia. O Netlify não deve tentar acessar diretamente esse banco local.
 
-## Atualização Entregas V2
-Retirada e WhatsApp agora usam apenas ativação/desativação. Links ficam restritos aos parceiros externos.
+## Instalação simples
 
+1. Instale Node.js 18 ou superior no computador da farmácia.
+2. Abra a pasta `sincronizador-pharmagno`.
+3. Execute `instalar.bat`.
+4. Execute `configurar.bat`.
+5. No `.env`, informe:
+   - senha correta do Firebird;
+   - **service_role/secret key** do Supabase.
+6. Execute `testar-conexao.bat`.
+7. Se o teste terminar sem erro, execute `iniciar-sincronizador.bat`.
+8. Para iniciar automaticamente com o Windows, execute `instalar-inicializacao.bat` como Administrador.
 
-## V3 — Kits e Sorteios
-Foram adicionadas áreas administrativas e seções públicas para kits promocionais e sorteios/campanhas.
+## Segurança importante
 
+A `SUPABASE_SERVICE_ROLE_KEY` é secreta.
 
-## Integração Supabase / Pharmagno
-A vitrine consulta `produtos_pharmagno` diretamente pelo REST API do Supabase usando a publishable key em `assets/js/config.js`.
-A tabela precisa permitir SELECT para a chave pública (RLS/policy adequada, caso RLS esteja habilitado).
-Campos usados: codigo, produto, laboratorio, classe, subclasse, preco_prazo, preco_vista, estoque, desconto_fixo_pct, excecao_promocao, promocao_manual e ativo.
+- NÃO coloque essa chave em `assets/js/config.js`;
+- NÃO envie o arquivo `.env` para o GitHub;
+- NÃO publique a pasta `sincronizador-pharmagno` no Netlify.
 
+O sincronizador deve ficar apenas no computador/servidor operacional da farmácia.
 
-## Correção de preços e atualização automática (30/09/2026)
-- `preco_prazo` é tratado como preço cheio.
-- `preco_vista` é tratado como preço à vista/descontado.
-- WhatsApp mostra os dois valores somente quando eles forem realmente diferentes.
-- A vitrine escuta alterações da tabela `produtos_pharmagno` via Supabase Realtime e possui atualização de segurança ao voltar para a aba e a cada 60 segundos.
-- Rode `SUPABASE_REALTIME_SETUP.sql` uma vez para habilitar o Realtime na tabela, caso ainda não esteja habilitado. Isso não refaz a integração nem apaga dados.
+## Consulta do Pharmagno
 
-IMPORTANTE: o Realtime faz o trecho Supabase → site instantâneo. Para uma mudança feita dentro do Pharmagno chegar ao site automaticamente, o conector Pharmagno → Supabase existente precisa efetivamente gravar a alteração na tabela `produtos_pharmagno`.
+A consulta segue o documento fornecido pela MAGNO SYSTEM. A única adaptação é retirar o filtro `ESTOQUEATUAL > 0`, pois isso permite enviar também estoque zerado ao site. Sem essa adaptação, um produto que esgotasse poderia continuar com o estoque antigo no Supabase.
 
+## Fluxo final
 
-## Sincronização automática Pharmagno → site
+`Pharmagno (Firebird) → sincronizador local → Supabase → Realtime → site`
 
-Foi incluído `sincronizador-pharmagno/`, um conector local para Firebird. Ele consulta preços, promoção e estoque no banco do Pharmagno e envia somente alterações ao Supabase. O site continua recebendo mudanças do Supabase via Realtime. Consulte `sincronizador-pharmagno/README.md`.
+Assim, depois de configurado e mantido em execução, uma alteração feita no Pharmagno não precisa ser digitada novamente no site.
+
+## Teste recomendado antes da entrega
+
+1. Escolha um produto de teste no Pharmagno.
+2. Anote o preço atual no site.
+3. Altere o preço no Pharmagno.
+4. Aguarde até 30 segundos.
+5. Atualize/observe o site.
+6. Confira também o estoque e uma promoção.
+7. Restaure o preço original depois do teste.
+
+Os logs ficam em `logs/sincronizador.log`.
