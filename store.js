@@ -82,25 +82,16 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  // Fraldas de qualquer faixa etária ficam exclusivamente na categoria Fraldas.
-  // Não confundir com pomadas para assaduras, lenços ou absorventes.
-  if (/\b(FRALDAS?|FR\.?\s*GERIATRIC[AO]S?|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POM\s*POM)\b/.test(nome)) return 'Fraldas';
-  // Medicamentos xaropes abreviados (XP / XPE) e antissépticos bucais medicinais.
-  if (/\b(XP|XPE|XAROPE)\b/.test(nome) && /\b(AMBROX|ACEBROFIL|ACETILCIST|DEXCLORFEN|LORATADIN|SALBUTAMOL|BROMEXIN)\w*/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
-  if (/\bANTISSEPTICO\s+BUCAL\b/.test(nome)) return 'Higiene';
-
-  // Produtos de apoio e utilidades, separados de Higiene e Medicamentos.
-  // A categoria de origem não é confiável para esses itens.
-  if (/\b(ATADURA|BALA(S)? DE GENGIBRE|APARELHO(S)? (DE )?PRESSAO|ESFIGMOMANOMETRO|TENSIOMETRO|GLICOSIMETRO|GLUCOMETRO|GLICEMIA|ACCU[ .-]?CHEK|TIRAS? REAGENTES?|LANCETAS?|BOLSA(S)? DE COLOSTOMIA|COLOSTOMIA|BOLSA(S)? TERMICA(S)?|COMPRESSA(S)? DE GEL|B(A|YE)[ -]?BY[ -]?FEVER|BABYFEVER|TERMOMETRO)\b/.test(nome)) return 'Diversos';
-  // Medicamentos citados pela farmácia que não possuem descrição padronizada.
-  if (/\b(BACTRIM|BELMIRAX|BETOGENTA|AMBROXMEL)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
-
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
     /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
+  // Reconhecimento adicional de medicamentos que chegam sem classe confiável.
+  // Evita que a categoria padrão Higiene receba princípios ativos comuns.
+  const farmacosAdicionais = /\b(OMEPRAZOL|PANTOPRAZOL|ESOMEPRAZOL|LOSARTANA|ENALAPRIL|CAPTOPRIL|ATENOLOL|METOPROLOL|PROPRANOLOL|ANLODIPINO|HIDROCLOROTIAZIDA|FUROSEMIDA|ESPIRONOLACTONA|METFORMINA|GLIBENCLAMIDA|GLICLAZIDA|INSULINA|SINVASTATINA|ATORVASTATINA|ROSUVASTATINA|SERTRALINA|FLUOXETINA|ESCITALOPRAM|CITALOPRAM|AMITRIPTILINA|CLONAZEPAM|DIAZEPAM|ALPRAZOLAM|TRAMADOL|CODEINA|DICLOFENACO|NAPROXENO|MELOXICAM|PIROXICAM|CEFALEXINA|CEFTRIAXONA|CIPROFLOXACINO|LEVOFLOXACINO|METRONIDAZOL|FLUCONAZOL|ACICLOVIR|HIDROCORTISONA|BETAMETASONA|DEXAMETASONA|BUDESONIDA|SALBUTAMOL|MONTELUCASTE|FEXOFENADINA|LEVOCETIRIZINA|BROMOPRIDA|DOMPERIDONA|ONDANSETRONA|METOCLOPRAMIDA|BUTILBROMETO|ESCOPOLAMINA|DORFLEX|NOVALGINA|NEOSALDINA|BUSCOPAN|TYLENOL|ADVIL|ALLEGRA|DRAMIN|LUFTAL|BENEGRIP|CORISTINA|RESFENOL|CIMEGRIPE|MAXALGINA|TADALAFILA|SILDENAFILA|LEVOTIROXINA|ALOPURINOL|COLCHICINA|CLOPIDOGREL|VARFARINA|RIVAROXABANA|APIXABANA)\b/;
+  if (farmacosAdicionais.test(nome) || /\b(USO ORAL|USO INJETAVEL|COMPRIMIDOS?|CAPSULAS?|DRAGEAS?|POMADA OFTALMICA|SOLUCAO NASAL|SPRAY NASAL|SOLUCAO INJETAVEL|SUSPENSAO ORAL)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
   if (medicamentoPeloProduto || /\b(ACETATO DE DEXAMETASONA|ACEVITON|ACCU.CHEK|GLICEMIA|GLICOSIMETRO|GLUCOMETRO|TIRAS? REAGENTES?|LANCETAS?)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
@@ -110,7 +101,7 @@ function categoriaLoja(p) {
 
   // Produtos infantis: priorizar o uso do produto antes da classe genérica.
   if (/\b(FRALDA|LENCOS? UMEDECIDOS?|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|POMADA PARA ASSADURA)\b/.test(nome) &&
-      !/\b(GERIATRIC|ADULTO|SENIOR|INCONTINENCIA)\b/.test(nome)) return 'Higiene';
+      !/\b(GERIATRIC|ADULTO|SENIOR|INCONTINENCIA)\b/.test(nome)) return 'Infantil';
 
   // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
   // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
@@ -127,13 +118,13 @@ function categoriaLoja(p) {
   }
 
   const infantil = /\b(FRALDA|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|LENCO UMEDECIDO|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|ABSORVENTE SEIO|ESCOVA INFANTIL|PENTE INFANTIL)\b/.test(texto);
-  if (infantil) return 'Higiene';
+  if (infantil) return 'Infantil';
 
   const classeNorm = classe.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   if (/COSMET/.test(classeNorm)) return 'Cosméticos';
   if (/PERFUM/.test(classeNorm)) return 'Perfumaria';
   if (/HIGIENE/.test(classeNorm)) return 'Higiene';
-  if (/INFANTIL/.test(classeNorm)) return 'Higiene';
+  if (/INFANTIL/.test(classeNorm)) return 'Infantil';
 
   if (/\b(ABSORVENTE|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE|ALGODAO|COTONETE|PAPEL HIGIENICO|PROTETOR DIARIO|HASTE FLEXIVEL)\b/.test(texto)) return 'Higiene';
   return 'Higiene';
@@ -190,7 +181,7 @@ async function carregarCatalogoSupabase() {
       prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
     }
   }
-  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Diversos'];
+  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
   dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
   return true;
 }
@@ -219,8 +210,8 @@ function placeholderProduto(produto) {
 
   if (categoria === 'Medicamentos Éticos e Similares Equivalentes') {
     tipo = 'medicamentos'; simbolo = '✚'; titulo = 'Medicamentos';
-  } else if (categoria === 'Fraldas') {
-    tipo = 'infantil'; simbolo = '♡'; titulo = 'Fraldas';
+  } else if (categoria === 'Infantil') {
+    tipo = 'infantil'; simbolo = '♡'; titulo = 'Linha Infantil';
   } else if (categoria === 'Perfumaria' || categoria === 'Cosméticos') {
     tipo = 'perfumaria'; simbolo = '✦'; titulo = categoria;
   } else if (/suplement/i.test(categoria)) {
