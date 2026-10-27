@@ -1,0 +1,8 @@
+CORREÇÃO PONTUAL — CATEGORIAS DA LOJA
+
+Este pacote mantém o index.html original, CSS, imagens, painel administrativo e integração Supabase.
+A correção principal substitui assets/js/store.js pela versão de loja mais recente que já existe no projeto original, com classificação de produtos por nome/classe/subclasse para Fraldas, Anticoncepcionais e Saúde Íntima.
+
+Os produtos são lidos do catálogo real do Supabase, ativos e com estoque positivo. Não foram inventados preços, estoque ou medicamentos. Se uma categoria ainda ficar vazia, é necessário conferir os registros reais da tabela produtos_pharmagno no Supabase (produto, classe, subclasse, ativo e estoque).
+
+Publicação: envie o conteúdo desta pasta para o repositório mantendo a estrutura de pastas. Faça backup antes de substituir os arquivos.

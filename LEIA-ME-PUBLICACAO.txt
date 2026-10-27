@@ -1,7 +1,9 @@
-PUBLICAÇÃO — FARMÁCIA MAIS ECONÔMICA
+ZIP PARA PUBLICAR NO NETLIFY
 
-IMPORTANTE: este ZIP já está organizado com index.html na raiz. Extraia o ZIP e envie o CONTEÚDO da pasta extraída para a raiz do repositório GitHub (não envie uma pasta externa contendo tudo).
+Este ZIP contem apenas os arquivos necessarios ao site estatico e ao painel, sem copias antigas, PDFs, scripts SQL e sincronizador local.
 
-Confirme que index.html e a pasta assets ficam no mesmo nível. A página usa assets/css/store.css e assets/js/*.js; se assets estiver em outro nível, o site aparece sem estilos e os recursos podem não funcionar.
+Publique o ZIP descompactado pelo Netlify Drop ou arraste a pasta extraida. O arquivo index.html deve estar na raiz.
 
-Depois de publicar, faça recarga forçada no navegador (Ctrl+F5). Preserve a configuração do Supabase e nunca publique chaves secretas.
+Google Analytics: G-R9R11TZZVY. Teste consentimento e relatorio Tempo real apos publicar.
+
+IMPORTANTE: O sincronizador Pharmagno instalado na farmacia nao deve ser substituido por este ZIP. Faca backup da versao atual antes de publicar.
