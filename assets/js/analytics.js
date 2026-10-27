@@ -4,7 +4,6 @@
   'use strict';
   var id = String(window.FARMACIA_GA4_ID || '').trim();
   if (!/^G-[A-Z0-9]{6,15}$/i.test(id)) return;
-  if (window.FARMACIA_ANALYTICS_CONSENT !== true) return;
   window.dataLayer = window.dataLayer || [];
   window.gtag = function(){ window.dataLayer.push(arguments); };
   window.gtag('js', new Date());

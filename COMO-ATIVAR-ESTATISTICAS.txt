@@ -1,0 +1,13 @@
+ESTATÍSTICAS DO SITE — GOOGLE ANALYTICS 4
+
+1. Acesse https://analytics.google.com e crie uma propriedade GA4 para a farmácia.
+2. Em Administrador > Fluxos de dados > Web, configure o domínio farmaciamaiseconomicabdo.com.br.
+3. Copie o ID de medição no formato G-XXXXXXXXXX.
+4. Abra assets/js/analytics-config.js e coloque o ID entre as aspas.
+5. Configure o consentimento de cookies/privacidade antes de ativar a coleta, conforme exigências aplicáveis.
+6. Publique a pasta do site no Netlify e teste o relatório Tempo real.
+7. No painel da farmácia, abra Estatísticas e clique em Abrir relatórios no Google Analytics.
+
+IMPORTANTE: O painel contém acesso e instruções, não métricas inventadas nem integração de relatórios via API.
+Não enviamos nomes, termos de pesquisa, medicamentos nem mensagens ao Analytics.
+Os eventos dependem da interação efetiva do visitante e do consentimento aplicável.
