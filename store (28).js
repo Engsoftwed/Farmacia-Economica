@@ -82,35 +82,18 @@ function categoriaLoja(p) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   const nome = String(p.produto || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
-  // Fraldas de qualquer faixa etária ficam exclusivamente na categoria Fraldas.
-  // Não confundir com pomadas para assaduras, lenços ou absorventes.
-  if (/\b(FRALDAS?|FR\.?\s*GERIATRIC[AO]S?|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POM\s*POM)\b/.test(nome)) return 'Fraldas';
-  // Medicamentos xaropes abreviados (XP / XPE) e antissépticos bucais medicinais.
-  if (/\b(XP|XPE|XAROPE)\b/.test(nome) && /\b(AMBROX|ACEBROFIL|ACETILCIST|DEXCLORFEN|LORATADIN|SALBUTAMOL|BROMEXIN)\w*/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
-  if (/\bANTISSEPTICO\s+BUCAL\b/.test(nome)) return 'Higiene';
-
-  // Produtos de apoio e utilidades, separados de Higiene e Medicamentos.
-  // A categoria de origem não é confiável para esses itens.
-  if (/\b(ATADURA|BALA(S)? DE GENGIBRE|APARELHO(S)? (DE )?PRESSAO|ESFIGMOMANOMETRO|TENSIOMETRO|GLICOSIMETRO|GLUCOMETRO|GLICEMIA|ACCU[ .-]?CHEK|TIRAS? REAGENTES?|LANCETAS?|BOLSA(S)? DE COLOSTOMIA|COLOSTOMIA|BOLSA(S)? TERMICA(S)?|COMPRESSA(S)? DE GEL|B(A|YE)[ -]?BY[ -]?FEVER|BABYFEVER|TERMOMETRO)\b/.test(nome)) return 'Diversos';
-  // Medicamentos citados pela farmácia que não possuem descrição padronizada.
-  if (/\b(BACTRIM|BELMIRAX|BETOGENTA|AMBROXMEL)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
-
   // 1) O nome/apresentação do produto é a evidência mais forte para medicamentos.
   // Isso impede que xaropes pediátricos virem "Infantil" só por conterem a palavra infantil.
   const medicamentoPeloProduto =
     /\b(COMPRIMID|CAPSUL|XAROPE|XPE|SUSPENSAO|SOLUCAO ORAL|GOTAS?|AMPOLA|INJET|COLIRIO|SUPOSITORIO|ANTIBIOT|ANALGES|ANTITERM|ANTI-INFLAM|ANTIALERG|VERMIFUG|BRONCODIL|EXPECTOR|MUCOLIT|ANTIGRIPAL)\b/.test(nome) ||
     /\b\d+(?:[.,]\d+)?\s*(MG|MCG|UI)(?:\s*\/\s*\d*(?:[.,]\d+)?\s*ML)?\b/.test(nome) ||
     /\b(ACEBROFILINA|ALBENDAZOL|ABRYFLUI|DIPIRONA|PARACETAMOL|IBUPROFENO|AMOXICILINA|AZITROMICINA|LORATADINA|PREDNISOLONA|SIMETICONA|ACETILCISTEINA|AMBROXOL|DEXCLORFENIRAMINA|NIMESULIDA|CETIRIZINA|DESLORATADINA)\b/.test(nome);
-  if (medicamentoPeloProduto || /\b(ACETATO DE DEXAMETASONA|ACEVITON|ACCU.CHEK|GLICEMIA|GLICOSIMETRO|GLUCOMETRO|TIRAS? REAGENTES?|LANCETAS?)\b/.test(nome)) return 'Medicamentos Éticos e Similares Equivalentes';
+  if (medicamentoPeloProduto) return 'Medicamentos Éticos e Similares Equivalentes';
 
   // 2) A lista curada de Perfumaria/Cosméticos corrige cadastros antigos do Pharmagno.
   // Ex.: absorventes não devem virar medicamentos só porque a classe de origem veio errada.
   const especial = window.classificarPerfumariaCosmeticos?.(p.produto);
   if (especial) return especial.tipo;
-
-  // Produtos infantis: priorizar o uso do produto antes da classe genérica.
-  if (/\b(FRALDA|LENCOS? UMEDECIDOS?|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|POMADA PARA ASSADURA)\b/.test(nome) &&
-      !/\b(GERIATRIC|ADULTO|SENIOR|INCONTINENCIA)\b/.test(nome)) return 'Higiene';
 
   // 3) Produtos de higiene/perfumaria podem estar cadastrados no Pharmagno com classe
   // farmacêutica antiga. O NOME do produto prevalece antes da classe de origem.
@@ -127,13 +110,13 @@ function categoriaLoja(p) {
   }
 
   const infantil = /\b(FRALDA|PAMPERS|HUGGIES|BABYSEC|ISABABY|PIQUITUCHO|POMPOM|LENCO UMEDECIDO|MAMADEIRA|CHUPETA|BICO DE MAMADEIRA|ABSORVENTE SEIO|ESCOVA INFANTIL|PENTE INFANTIL)\b/.test(texto);
-  if (infantil) return 'Higiene';
+  if (infantil) return 'Infantil';
 
   const classeNorm = classe.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
   if (/COSMET/.test(classeNorm)) return 'Cosméticos';
   if (/PERFUM/.test(classeNorm)) return 'Perfumaria';
   if (/HIGIENE/.test(classeNorm)) return 'Higiene';
-  if (/INFANTIL/.test(classeNorm)) return 'Higiene';
+  if (/INFANTIL/.test(classeNorm)) return 'Infantil';
 
   if (/\b(ABSORVENTE|SABONETE|CREME DENTAL|PASTA DENTAL|ESCOVA DENTAL|FIO DENTAL|ENXAGUANTE|ALGODAO|COTONETE|PAPEL HIGIENICO|PROTETOR DIARIO|HASTE FLEXIVEL)\b/.test(texto)) return 'Higiene';
   return 'Higiene';
@@ -182,15 +165,7 @@ async function carregarCatalogoSupabase() {
     descricao:usaCatalogoBeleza ? `${especial.tipo} • ${especial.categoria}` : (p.subclasse ? `${p.classe} • ${p.subclasse}` : (p.classe||''))
   };
   });
-  // Aplica "Leve X por preço" apenas ao produto explicitamente selecionado no painel.
-  const deals=(dados.quantityDeals||[]).filter(d=>d.ativo!==false);
-  for(const d of deals){
-    const prod=dados.produtos.find(p=>String(p.id)===String(d.produtoId));
-    if(prod && Number(d.qtd)>=2 && Number(d.valor)>0){
-      prod.promocaoManual=`LEVE ${Number(d.qtd)} POR R$ ${Number(d.valor).toFixed(2).replace('.',',')}`;
-    }
-  }
-  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Fraldas','Diversos'];
+  const ordem=['Medicamentos Éticos e Similares Equivalentes','Perfumaria','Cosméticos','Higiene','Infantil'];
   dados.categorias = ordem.filter(nome=>dados.produtos.some(p=>p.categoria===nome)).map(nome=>({nome,icone:'✚',descricao:'Ver produtos'}));
   return true;
 }
@@ -219,8 +194,8 @@ function placeholderProduto(produto) {
 
   if (categoria === 'Medicamentos Éticos e Similares Equivalentes') {
     tipo = 'medicamentos'; simbolo = '✚'; titulo = 'Medicamentos';
-  } else if (categoria === 'Fraldas') {
-    tipo = 'infantil'; simbolo = '♡'; titulo = 'Fraldas';
+  } else if (categoria === 'Infantil') {
+    tipo = 'infantil'; simbolo = '♡'; titulo = 'Linha Infantil';
   } else if (categoria === 'Perfumaria' || categoria === 'Cosméticos') {
     tipo = 'perfumaria'; simbolo = '✦'; titulo = categoria;
   } else if (/suplement/i.test(categoria)) {
@@ -235,43 +210,66 @@ function placeholderProduto(produto) {
 }
 function obterOfertaProduto(produto) {
   const precoCheio = Number(produto.precoCheio ?? produto.preco ?? 0);
-  let precoFinal = precoCheio;
-  let origem = "Preço normal";
+  const precoVista = Number(produto.precoVista ?? precoCheio);
 
-  // REGRA SEGURA: não existe desconto automático por categoria, genérico ou preço à vista.
-  // Só entra em promoção quando o painel cadastrou explicitamente um desconto.
-  if (!produto.excecaoPromocao) {
-    const descontoFixo = Math.max(0, Number(produto.descontoFixo || 0));
-    const regras = promocoesCatalogo.filter(r => {
-      if (!r.ativo) return false;
-      if (r.tipo === "produto") return String(r.produto_id) === String(produto.id);
-      if (r.tipo === "classe") return r.classe === (produto.classeOriginal || produto.categoria);
-      if (r.tipo === "subclasse") return r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse;
-      return false;
-    });
-    const descontoRegra = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
-    const descontoAplicado = Math.min(100, Math.max(descontoFixo, descontoRegra));
-    if (descontoAplicado > 0 && precoCheio > 0) {
-      precoFinal = precoCheio * (1 - descontoAplicado / 100);
-      origem = "Promoção cadastrada no painel";
+  // Começa pelo menor preço real informado pelo Pharmagno.
+  let precoFinal = precoVista > 0 ? Math.min(precoCheio || precoVista, precoVista) : precoCheio;
+  let origem = precoFinal < precoCheio - 0.009 ? "Pharmagno / à vista" : "Preço normal";
+
+  // Promoções locais não são somadas entre si nem sobre o preço à vista.
+  // Comparamos as opções e usamos somente o menor preço final.
+  const base = calcularPrecoPromocional({...produto, preco: precoCheio}, dados.promocoes);
+  if (Number(base.precoFinal) < precoFinal - 0.009) {
+    precoFinal = Number(base.precoFinal);
+    origem = base.promocao?.nome || "Promoção do site";
+  }
+
+  const descontoFixo = produto.excecaoPromocao ? 0 : Number(produto.descontoFixo || 0);
+  const regras = produto.excecaoPromocao ? [] : promocoesCatalogo.filter(r =>
+    r.ativo && (
+      (r.tipo === "classe" && r.classe === (produto.classeOriginal || produto.categoria)) ||
+      (r.tipo === "subclasse" && r.classe === (produto.classeOriginal || produto.categoria) && r.subclasse === produto.subclasse)
+    )
+  );
+  const descontoGrupo = regras.length ? Math.max(...regras.map(r => Number(r.desconto || 0))) : 0;
+  const melhorConfigurado = Math.max(descontoFixo, descontoGrupo);
+  const precoConfigurado = melhorConfigurado ? precoCheio * (1 - melhorConfigurado / 100) : precoCheio;
+  if (precoConfigurado < precoFinal - 0.009) {
+    precoFinal = precoConfigurado;
+    origem = "Promoção cadastrada";
+  }
+
+  // Regra comercial da loja: Medicamentos, Perfumaria e Cosméticos têm
+  // no mínimo 10% OFF. Independe de foto, pois é calculada pelos dados do produto.
+  const categoriaPromo = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const minimoDez = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaPromo) && !excluidoPromo10(produto);
+  if (minimoDez && !produto.excecaoPromocao && precoCheio > 0) {
+    const precoMinimo10 = precoCheio * 0.90;
+    if (precoMinimo10 < precoFinal - 0.009) {
+      precoFinal = precoMinimo10;
+      origem = "Oferta 10% da loja";
     }
   }
 
   const desconto = precoCheio > 0 && precoFinal < precoCheio - 0.009
-    ? ((precoCheio - precoFinal) / precoCheio) * 100 : 0;
+    ? ((precoCheio - precoFinal) / precoCheio) * 100
+    : 0;
+
   return {precoCheio, precoFinal, desconto, origem};
 }
 
 function cardProduto(produto) {
   const oferta = obterOfertaProduto(produto);
-  // Tarja somente quando existe desconto realmente cadastrado no painel.
-  const percentualTarja = Math.round(oferta.desconto || 0);
+  // A tarja é determinada pela promoção/categoria, nunca pela existência de foto.
+  const categoriaNormalizada = String(produto.categoria || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const categoriaComPromoMinima = /MEDICAMENT|PERFUMARIA|COSMETIC/.test(categoriaNormalizada) && !produto.excecaoPromocao && !excluidoPromo10(produto);
+  const percentualTarja = categoriaComPromoMinima ? Math.max(10, Math.round(oferta.desconto || 0)) : Math.round(oferta.desconto || 0);
 
   return `
     <article class="product">
       <div class="product-visual">
         ${percentualTarja > 0 ? `<span class="discount">-${percentualTarja}%</span>` : ""}
-        ${produto.imagemUrl && !/Medicamentos/i.test(produto.categoria) ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
+        ${produto.imagemUrl ? `<img src="${produto.imagemUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';const p=this.nextElementSibling;if(p&&p.classList.contains('product-placeholder'))p.style.display='flex'">${placeholderProduto(produto).replace('class="product-placeholder ', 'style="display:none" class="product-placeholder ')}` : placeholderProduto(produto)}
       </div>
       <div class="product-meta">${['Perfumaria','Cosméticos'].includes(produto.categoria) ? `${produto.categoria}${produto.categoriaDetalhe ? ` • ${produto.categoriaDetalhe}` : ''}` : produto.categoria}</div>
       <h3>${produto.nome}</h3>
@@ -362,14 +360,7 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
   termoAtual = termo;
   if (resetarPagina) paginaAtual = 1;
 
-  const idsExclusivos = new Set((dados.kits || [])
-    .filter(k => k.ativo && k.ocultarIndividuais)
-    .flatMap(k => (k.produtoIds || []).map(String)));
-  const nomesExclusivos = new Set((dados.kits || [])
-    .filter(k => k.ativo && k.ocultarIndividuais)
-    .flatMap(k => String(k.produtos || '').split(/\s*\+\s*/).map(n => n.trim().toLowerCase()).filter(Boolean)));
   const listaCategoria = dados.produtos
-    .filter(p => !idsExclusivos.has(String(p.id)) && !nomesExclusivos.has(String(p.nome || '').trim().toLowerCase()))
     .filter(p => p.ativo && Number(p.estoque || 0) > 0)
     .filter(p => filtroAtual === "Todos" || categoriaCatalogoSegura(p) === filtroAtual)
     .filter(p => !termoAtual || `${p.nome} ${p.marca} ${p.categoria} ${p.setor} ${p.categoriaDetalhe||''}`.toLowerCase().includes(termoAtual.toLowerCase()));
@@ -404,10 +395,6 @@ function renderProdutos(filtro="Todos", termo="", resetarPagina=true) {
 function adicionar(id) {
   const produto = dados.produtos.find(p => p.id === id);
   if (!produto) return;
-  if ((dados.kits || []).some(k => k.ativo && k.ocultarIndividuais && (
-    (k.produtoIds || []).some(id => String(id) === String(produto.id)) ||
-    String(k.produtos || '').split(/\s*\+\s*/).some(nome => nome.trim().toLowerCase() === String(produto.nome || '').trim().toLowerCase())
-  ))) return alert('Este produto é vendido exclusivamente em kit.');
 
   const estoque = Math.max(0, Number(produto.estoque || 0));
   if (estoque < 1) return alert("Produto sem estoque no momento.");
@@ -512,7 +499,6 @@ async function carregarConfiguracoesLoja(){
       if(remoto.configuracoes)dados.configuracoes={...(dados.configuracoes||{}),...remoto.configuracoes};
       if(Array.isArray(remoto.kits))dados.kits=remoto.kits;
       if(Array.isArray(remoto.sorteios))dados.sorteios=remoto.sorteios;
-      if(Array.isArray(remoto.quantityDeals))dados.quantityDeals=remoto.quantityDeals;
     }
   }catch(e){console.warn('Configurações da loja indisponíveis; usando contingência local.',e)}
 }
@@ -671,18 +657,11 @@ function renderKits() {
 
   area.querySelectorAll("[data-kit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const kit = kits.find(k => String(k.id) === String(btn.dataset.kit));
-      if (!kit) return;
+      const kit = kits.find(k => k.id === Number(btn.dataset.kit));
       const msg = `Olá! Gostaria de consultar o ${kit.nome}, anunciado por ${moeda(kit.preco)}. Podem confirmar disponibilidade e condições?`;
       window.open(linkWhatsapp(msg), "_blank", "noopener");
     });
   });
-}
-
-function dataBR(v){
-  if(!v) return "Data a definir";
-  const m=String(v).slice(0,10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
 }
 
 function renderSorteios() {
@@ -694,7 +673,7 @@ function renderSorteios() {
     <article class="giveaway-card">
       <span class="kicker light">SORTEIO / CAMPANHA</span>
       <h3>${s.titulo}</h3>
-      <div class="period">${dataBR(s.inicio)} → ${dataBR(s.fim)}</div>
+      <div class="period">${s.inicio || "Data a definir"} → ${s.fim || "Data a definir"}</div>
       <p><b>Prêmio:</b> ${s.premio}</p>
       <p>${s.descricao}</p>
       <details><summary>Ver regulamento informado</summary><p>${s.regulamento || "Regulamento ainda não cadastrado."}</p></details>
