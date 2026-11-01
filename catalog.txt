@@ -1,0 +1,124 @@
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+
+// Inicialização do cliente Supabase (utiliza variáveis de ambiente do Vite)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/
+
+Helper de categorização inteligente no Front-end.
+
+Corrige falhas onde medicamentos eram rotulados como 'HIGIENE'.
+*/
+export function classifyProduct(product) {
+const name = (product.produto || '').toLowerCase();
+
+// Lista de palavras-chave de Higiene e Perfumaria
+const perfumariaKeywords = [
+'desodorante', 'absorvente', 'sabonete', 'shampoo', 'condicionador',
+'creme', 'fralda', 'protetor', 'higiene', 'colonia', 'perfume',
+'esponja', 'lamina', 'lâmina', 'talco', 'batom', 'esmalte', 'lenco', 'lenço'
+];
+
+const isPerfumaria = perfumariaKeywords.some(keyword => name.includes(keyword));
+
+if (isPerfumaria) {
+return {
+categoria: 'Perfumaria',
+percentualDesconto: 12,
+tipoMedicamento: null
+};
+}
+
+// Se não for perfumaria, é Medicamento
+const isGeneric = name.includes('gen') || name.includes('med.gen') || name.includes('generico');
+
+return {
+categoria: 'Medicamento',
+percentualDesconto: 10,
+tipoMedicamento: isGeneric ? 'Genérico/Similar' : 'Original/Referência'
+};
+}
+
+/
+
+Componente do Card do Produto
+*/
+export function ProductCard({ product }) {
+// Obtém classificação e desconto garantidos
+const classification = classifyProduct(product);
+
+const categoria = product.categoria || classification.categoria;
+const percentualDesconto = product.percentual_desconto || classification.percentualDesconto;
+const tipoMedicamento = product.tipo_medicamento || classification.tipoMedicamento;
+
+const precoOriginal = Number(product.preco) || 0;
+const precoComDesconto = precoOriginal * (1 - percentualDesconto / 100);
+
+return (
+
+);
+}
+
+/
+
+Página Principal do Catálogo
+*/
+export default function Catalog() {
+const [products, setProducts] = useState([]);
+const [loading, setLoading] = useState(true);
+const [search, setSearch] = useState('');
+const [selectedCategory, setSelectedCategory] = useState('TODOS'); // TODOS, Medicamento, Perfumaria
+const [selectedSubtype, setSelectedSubtype] = useState('TODOS'); // TODOS, Original/Referência, Genérico/Similar
+
+useEffect(() => {
+async function fetchProducts() {
+try {
+setLoading(true);
+const { data, error } = await supabase
+.from('produtos_pharmagno')
+.select('*')
+.limit(100);
+
+    if (error) throw error;
+    setProducts(data || []);
+  } catch (err) {
+    console.error('Erro ao buscar produtos:', err);
+  } finally {
+    setLoading(false);
+  }
+}
+
+fetchProducts();
+
+
+}, []);
+
+// Filtragem dinâmica dos produtos
+const filteredProducts = products.filter(product => {
+const classif = classifyProduct(product);
+const cat = product.categoria || classif.categoria;
+const tipo = product.tipo_medicamento || classif.tipoMedicamento;
+const nameMatch = (product.produto || '').toLowerCase().includes(search.toLowerCase());
+
+if (!nameMatch) return false;
+
+if (selectedCategory !== 'TODOS' && cat !== selectedCategory) {
+  return false;
+}
+
+if (selectedCategory === 'Medicamento' && selectedSubtype !== 'TODOS') {
+  if (tipo !== selectedSubtype) return false;
+}
+
+return true;
+
+
+});
+
+return (
+
+);
+}
