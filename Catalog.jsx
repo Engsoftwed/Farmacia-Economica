@@ -20,29 +20,23 @@ export default function Catalog() {
       .from('produtos_pharmagno')
       .select('id, produto, preco, categoria, percentual_desconto, tipo_medicamento, estoque, link_foto');
     
-    if (error) {
-      console.error('Erro ao buscar produtos:', error);
-    } else {
-      setProducts(data || []);
+    if (!error && data) {
+      setProducts(data);
     }
     setLoading(false);
   }
 
-  // Filter products cleanly using helper
   const filteredProducts = products.filter(p => {
-    const realCategory = getProductCategory(p);
+    const realCat = getProductCategory(p);
     const medType = getMedicamentoType(p);
     
-    // Search match
     const matchesSearch = (p.produto || '').toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
 
-    // Category match
-    if (selectedCategory !== 'TODOS' && realCategory !== selectedCategory) {
+    if (selectedCategory !== 'TODOS' && realCat !== selectedCategory) {
       return false;
     }
 
-    // Medicamento Type match (Similares vs Originais)
     if (selectedCategory === 'Medicamentos' && selectedMedType !== 'TODOS') {
       if (selectedMedType === 'Similar' && medType !== 'Genérico/Similar') return false;
       if (selectedMedType === 'Original' && medType !== 'Original/Referência') return false;
@@ -53,7 +47,6 @@ export default function Catalog() {
 
   return (
     <div className="max-w-6xl mx-auto p-4">
-      {/* Category Navigation Tabs */}
       <div className="flex flex-wrap gap-2 mb-4 border-b pb-3">
         {['TODOS', 'Medicamentos', 'Perfumaria'].map(cat => (
           <button
@@ -63,15 +56,14 @@ export default function Catalog() {
               selectedCategory === cat ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {cat === 'Medicamentos' ? 'Medicamentos (-10%)' : cat === 'Perfumaria' ? 'Perfumaria (-12%)' : 'Todos os Produtos'}
+            {cat === 'Medicamentos' ? 'Medicamentos (-10%)' : cat === 'Perfumaria' ? 'Perfumaria (-12%)' : 'Todos'}
           </button>
         ))}
       </div>
 
-      {/* Sub-filter for Medicamentos (Similares vs Originais) */}
       {selectedCategory === 'Medicamentos' && (
         <div className="flex gap-2 mb-4 bg-gray-50 p-2 rounded">
-          <span className="text-xs font-semibold self-center text-gray-600">Filtrar Medicamentos:</span>
+          <span className="text-xs font-semibold self-center text-gray-600">Tipo:</span>
           <button
             onClick={() => setSelectedMedType('TODOS')}
             className={`px-3 py-1 text-xs rounded ${selectedMedType === 'TODOS' ? 'bg-blue-600 text-white' : 'bg-white border'}`}
@@ -93,7 +85,6 @@ export default function Catalog() {
         </div>
       )}
 
-      {/* Search Input */}
       <input
         type="text"
         placeholder="Buscar produto por nome..."
@@ -102,9 +93,8 @@ export default function Catalog() {
         className="w-full p-2 border rounded-lg mb-6 text-sm"
       />
 
-      {/* Grid Display */}
       {loading ? (
-        <p className="text-center py-10">Carregando catálogo atualizado...</p>
+        <p className="text-center py-10">Carregando produtos...</p>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {filteredProducts.map(product => (
