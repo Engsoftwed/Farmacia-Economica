@@ -1,0 +1,13 @@
+--- INSTRUÇÕES DE APLICAÇÃO DAS CORREÇÕES ---
+
+1. SUPABASE (BANCO DE DADOS):
+   - Acesse o Dashboard do Supabase -> SQL Editor.
+   - Execute o conteúdo do arquivo 'SUPABASE_FIX_COMPLETO.sql'.
+   - Isso criará/corrigirá as tabelas de pedidos, ativará o Realtime e atualizará as rotas do Pharmagno.
+
+2. PHARMAGNO (INTEGRAÇÃO DE ESTOQUE LOCAL):
+   - Substitua ou atualize seu script de sync com o 'pharmagno_sync.js'.
+   - Certifique-se de configurar as variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.
+
+3. PAINEL ADMIN:
+   - Importe as funções corrigidas de 'admin_fix.js' no script do seu painel administrativo para receber pedidos em tempo real via Supabase.
