@@ -1,0 +1,12 @@
+--- INSTRUÇÕES PARA CORRIGIR OS ERROS MOSTRADOS NA PRINTSCREEN ---
+
+1. ERRO DAS FRALDAS ADULTAS COM TAG E FOTO "INFANTIL":
+   - Substitua o arquivo 'ProductCard.jsx' no seu projeto React/Vite/Next.
+   - Ele corrige a lógica que estava forçando a tag superior para 'INFANTIL' e a imagem de placeholder 'Linha Infantil' para fraldas adultas (Bigfral).
+
+2. ERRO DE CATEGORIZAÇÃO NO BANCO DE DADOS:
+   - Execute o script 'SUPABASE_CATEGORIA_FIX.sql' no SQL Editor do Supabase.
+   - Ele vai atualizar todas as fraldas adultas que estavam salvas com a categoria 'INFANTIL' no banco de dados.
+
+3. ERRO DE SOBREPOSIÇÃO DA TELA DE BUSCA:
+   - Importe 'search_modal_fix.css' no seu projeto para evitar que a janela de busca fique cortada ou sobrepondo a vitrine do site sem transparência/container adequado.

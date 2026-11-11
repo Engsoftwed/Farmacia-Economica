@@ -1,65 +1,80 @@
 import React from 'react';
-import { getProductCategory, getDiscountPercentage, calculateFinalPrice, getMedicamentoType } from '../utils/categoryHelper';
 
-export default function ProductCard({ product, onAddToCart }) {
-  const category = getProductCategory(product);
-  const discountPercent = getDiscountPercentage(product);
-  const finalPrice = calculateFinalPrice(product);
-  const originalPrice = parseFloat(product.preco || 0);
-  const medType = category === 'Medicamentos' ? getMedicamentoType(product) : null;
+export default function ProductCard({ produto }) {
+  // 1. Correção do mapeamento de imagem placeholder baseada na categoria REAL do produto
+  const getPlaceholderImage = (categoria, subcategoria) => {
+    const catLower = (categoria || '').toLowerCase();
+    const subLower = (subcategoria || '').toLowerCase();
+    
+    if (catLower.includes('infantil') || subLower.includes('infantil')) {
+      return '/images/placeholders/linha-infantil.jpg';
+    }
+    if (catLower.includes('adulto') || catLower.includes('geriátrica') || subLower.includes('adulto') || subLower.includes('geriátricas')) {
+      return '/images/placeholders/linha-adulto.jpg';
+    }
+    return '/images/placeholders/produto-generico.jpg';
+  };
+
+  // 2. Correção da Badge Superior (Estava fixada em "INFANTIL" por erro de propriedade)
+  const categoriaExibida = produto.subcategoria || produto.categoria || 'Geral';
+  const imagemSrc = produto.imagem_url || getPlaceholderImage(produto.categoria, produto.subcategoria);
 
   return (
-    <div className="product-card border rounded-lg p-4 shadow-sm bg-white flex flex-col justify-between">
+    <div className="product-card border rounded-xl p-4 shadow-sm bg-white relative flex flex-col justify-between">
       <div>
-        <div className="flex justify-between items-center mb-2">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-            category === 'Perfumaria' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'
-          }`}>
-            {category.toUpperCase()}
-          </span>
-
-          {discountPercent > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              -{discountPercent}% OFF
-            </span>
-          )}
-        </div>
-
-        <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center mb-3 text-gray-400">
-          {product.link_foto ? (
-            <img src={product.link_foto} alt={product.produto} className="h-full object-contain" />
+        {/* Placeholder / Imagem do Produto */}
+        <div className="w-full h-40 bg-gray-50 rounded-lg flex flex-col items-center justify-center p-2 mb-3 relative">
+          {produto.imagem_url ? (
+            <img src={produto.imagem_url} alt={produto.nome} className="max-h-full object-contain" />
           ) : (
-            <span className="text-xs">{category}</span>
+            <div className="text-center">
+              <span className="text-xs font-semibold text-gray-500 uppercase block">
+                {produto.categoria || 'Medicamento'}
+              </span>
+              <span className="text-xs text-gray-400">Foto não cadastrada</span>
+            </div>
           )}
         </div>
 
-        <h3 className="font-bold text-gray-800 text-sm mb-1 uppercase line-clamp-2">
-          {product.produto}
+        {/* Tag Superior Correta (Subcategoria ou Categoria Principal) */}
+        <span className="text-[10px] font-bold tracking-wider text-red-600 uppercase">
+          {categoriaExibida}
+        </span>
+
+        {/* Nome do Produto */}
+        <h3 className="font-bold text-gray-900 text-sm mt-1 line-clamp-2">
+          {produto.nome}
         </h3>
 
-        <p className="text-xs text-gray-500 mb-2">
-          {medType ? `${medType}` : (product.apresentacao || 'Em estoque')}
-        </p>
-      </div>
-
-      <div className="mt-3 border-t pt-2 flex items-center justify-between">
-        <div>
-          {discountPercent > 0 && (
-            <span className="text-xs text-gray-400 line-through block">
-              R$ {originalPrice.toFixed(2).replace('.', ',')}
-            </span>
-          )}
-          <span className="text-base font-extrabold text-green-700">
-            R$ {finalPrice.toFixed(2).replace('.', ',')}
-          </span>
+        {/* Tags Secundárias */}
+        <div className="text-xs text-gray-500 mt-1">
+          {produto.tags || produto.subcategoria_nome || 'Geral'}
         </div>
 
-        <button 
-          onClick={() => onAddToCart && onAddToCart(product)}
-          className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full font-bold shadow"
-          title="Adicionar"
-        >
-          +
+        {/* Estoque */}
+        <div className="mt-2">
+          <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
+            Em estoque: {produto.estoque} un.
+          </span>
+        </div>
+      </div>
+
+      {/* Preço e Botão Adicionar */}
+      <div className="mt-4 flex items-center justify-between pt-2 border-t">
+        <div>
+          {produto.preco_de && (
+            <span className="text-xs line-through text-gray-400 block">
+              R$ {Number(produto.preco_de).toFixed(2).replace('.', ',')}
+            </span>
+          )}
+          <span className="text-lg font-bold text-gray-900">
+            R$ {Number(produto.preco).toFixed(2).replace('.', ',')}
+          </span>
+        </div>
+        <button className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 transition">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
         </button>
       </div>
     </div>

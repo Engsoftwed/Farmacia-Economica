@@ -1,0 +1,22 @@
+/* Correção de Z-Index e Overlay da Busca que está travando e sobrepondo os cards do fundo */
+
+.search-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-results-container {
+  background: #ffffff;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+}
