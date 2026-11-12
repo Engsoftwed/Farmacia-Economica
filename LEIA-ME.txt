@@ -1,2 +1,12 @@
-CORRECAO DA PAGINA INICIAL
-Substitua somente o index.html na RAIZ do repositorio GitHub usado pelo deploy (nao o admin/index.html). Preserve os demais arquivos. Confirme que a hospedagem esta publicando esse repositorio e diretorio. _redirects e netlify.toml sao apenas para Netlify. Antes de publicar faca backup.
+--- COMO APLICAR A SEPARAÇÃO DE FRALDAS ---
+
+1. BANCO DE DADOS (SUPABASE):
+   - Abra o SQL Editor no painel do Supabase.
+   - Cole e execute o arquivo 'SUPABASE_SEPARAR_FRALDAS.sql'.
+   - Isso separa imediatamente as fraldas geriátricas/adultas das infantis no banco.
+
+2. SINCRONIZAÇÃO PHARMAGNO:
+   - Use a função 'classificarProduto' do arquivo 'pharmagno_classificar_fraldas.js' antes de inserir/atualizar os produtos no Supabase, garantindo que futuras sincronizações não misturem as categorias.
+
+3. FRONTEND (CATÁLOGO):
+   - Utilize a lógica de 'Catalog_filtro_fraldas.jsx' nas abas de filtro da loja para exibir cada categoria na sua respectiva seção.
