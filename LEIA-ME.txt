@@ -1,12 +1,7 @@
---- COMO APLICAR A SEPARAÇÃO DE FRALDAS ---
+--- COMO REMOVER A TAG INFANTIL DA FRALDA ADULTO ---
 
-1. BANCO DE DADOS (SUPABASE):
-   - Abra o SQL Editor no painel do Supabase.
-   - Cole e execute o arquivo 'SUPABASE_SEPARAR_FRALDAS.sql'.
-   - Isso separa imediatamente as fraldas geriátricas/adultas das infantis no banco.
+O problema ocorre porque o produto 'BIGFRAL' no Supabase ainda está guardado com a tag de categoria antiga.
 
-2. SINCRONIZAÇÃO PHARMAGNO:
-   - Use a função 'classificarProduto' do arquivo 'pharmagno_classificar_fraldas.js' antes de inserir/atualizar os produtos no Supabase, garantindo que futuras sincronizações não misturem as categorias.
-
-3. FRONTEND (CATÁLOGO):
-   - Utilize a lógica de 'Catalog_filtro_fraldas.jsx' nas abas de filtro da loja para exibir cada categoria na sua respectiva seção.
+1. Abra o painel do Supabase -> SQL Editor.
+2. Cole e execute o script 'CORRECAO_DEFINITIVA_BANCO.sql'.
+3. Atualize o componente 'ProductCard.jsx' no seu projeto para garantir que o front-end filtre e exiba 'Adultas/Geriátricas' automaticamente, mesmo se o banco demorar para sincronizar.
