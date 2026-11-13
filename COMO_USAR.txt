@@ -1,0 +1,13 @@
+--- INSTRUÇÕES DE INTEGRAÇÃO NO FRONT-END (REACT) ---
+
+Como as tabelas no Supabase estão vazias (0 rows), o catálogo está a carregar os itens a partir de uma fonte externa ou JSON local. 
+
+1. Copie o ficheiro 'classificarProdutos.js' para a pasta 'src/utils/' (ou 'src/') do seu projeto.
+2. No ficheiro onde os produtos são carregados (ex: App.jsx, Catalog.jsx ou onde faz o fetch/import dos itens), importe a função:
+   import { normalizarCategoriasProdutos } from './utils/classificarProdutos';
+
+3. Aplique a função logo após receber a lista de produtos (antes de guardar no state ou renderizar):
+   const produtosCorrigidos = normalizarCategoriasProdutos(dadosRecebidos);
+   setProdutos(produtosCorrigidos);
+
+4. Faça o commit e push no Git para atualizar o site no ar.
