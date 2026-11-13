@@ -1,0 +1,2 @@
+O comando anterior retornou 0 linhas porque o nome da tabela pode não ser 'public.produtos' ou o produto está cadastrado com outro termo.
+Execute o script 'BUSCAR_EM_TODAS_AS_TABELAS.sql' no Supabase para localizar em qual tabela as fraldas estão guardadas.
